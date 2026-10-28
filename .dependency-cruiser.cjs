@@ -16,9 +16,11 @@ module.exports = {
     },
     {
       name: 'web-never-touches-the-database',
-      comment: 'apps/web talks to the API over GraphQL. It never imports the API or a DB driver.',
+      comment:
+        'apps/web and apps/admin talk to the API over GraphQL. They never import the API or a ' +
+        'DB driver.',
       severity: 'error',
-      from: { path: '^apps/web/' },
+      from: { path: '^apps/(web|admin)/' },
       to: { path: ['^apps/api/', 'node_modules/(mongoose|mongodb)/'] },
     },
     {

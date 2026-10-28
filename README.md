@@ -8,10 +8,11 @@ A multi-tenant invoicing SaaS built in phases as a production-grade learning pro
 
 ## Status
 
-| Phase        | State     |
-| ------------ | --------- |
-| 0 Plan       | done      |
-| 1 Foundation | in review |
+| Phase        | State                                   |
+| ------------ | --------------------------------------- |
+| 0 Plan       | done                                    |
+| 1 Foundation | in review                               |
+| 2–8          | planned (5 = admin console, revision 3) |
 
 ## Getting started
 

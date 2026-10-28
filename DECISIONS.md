@@ -2,12 +2,28 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Plan revision 3 (2026-10-28, during Phase 1 review)
+
+- **Option A chosen by the owner:** keep Next.js for the tenant product and add a platform admin
+  console built with Vite + React Router 8 (data mode) + Redux Toolkit/RTK Query, so plain React
+  routing and Redux-owned server state are both learned. Inserted as Phase 5; later phases
+  renumbered 6–8. PLAN §3.14 and ADR-0004 (status **proposed**, awaiting owner review).
+- **React Router data mode, not framework mode.** Framework mode is a server-rendering framework
+  in its own right (the Remix successor); using it would duplicate what Next.js already teaches.
+  Data mode keeps the console a static SPA.
+- **The TOTP module moves from Phase 7 to Phase 5,** because staff must use MFA from their first
+  login. Tenant-user MFA still ships in Phase 8 (E8) on the same module.
+- **Cognito stretch ADR renumbered to ADR-0005.**
+- **Admin console is English-only,** with strings behind one `t()` helper. WCAG 2.2 AA applies.
+- dependency-cruiser rule `web-never-touches-the-database` now covers `apps/admin` too. The
+  `runAsPlatform` import restriction is added in Phase 5, when the module exists.
+
 ## Phase 1 (2026-10-28)
 
 - **MongoDB 9.0.4, not 8.** `mongo:latest` is 9.0.4. Verified before choosing: a single-node
   replica set on 9.0.4 runs multi-document transactions through Mongoose 9.11.4 (driver 7.7)
   and round-trips an int64 above 2^53. Whether Atlas offers 9.0 on the tier we pick is checked
-  in Phase 7; if not, prod runs 8.x and this entry is revisited.
+  in Phase 8 (AWS); if not, prod runs 8.x and this entry is revisited.
 - **Phase 2 gotcha found while verifying:** `Model.find().lean()` returns a BSON `Long`, not a
   `bigint`, for a `BigInt` path. The codegen mappers in Phase 2 convert at the data boundary.
 - **pnpm 12.16.1** via `packageManager` + corepack (current `latest`).
