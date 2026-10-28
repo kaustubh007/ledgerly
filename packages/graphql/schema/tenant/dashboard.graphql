@@ -1,0 +1,20 @@
+type Dashboard {
+  "One entry per currency. Amounts in different currencies are never added together."
+  totals: [CurrencyTotals!]!
+  countsByStatus: [StatusCount!]!
+}
+
+type CurrencyTotals {
+  currency: String!
+  outstanding: Money!
+  overdue: Money!
+}
+
+type StatusCount {
+  status: InvoiceStatus!
+  count: Int!
+}
+
+extend type Query {
+  dashboard: Dashboard!
+}

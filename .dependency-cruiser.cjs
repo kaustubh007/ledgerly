@@ -51,8 +51,10 @@ module.exports = {
     tsConfig: { fileName: 'tsconfig.depcruise.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
-      conditionNames: ['@ledgerly/source', 'import', 'types', 'default'],
-      extensions: ['.ts', '.tsx', '.js'],
+      exportsFields: ['exports'],
+      conditionNames: ['@ledgerly/source', 'import', 'node', 'types', 'default'],
+      mainFields: ['module', 'main', 'types', 'typings'],
+      extensions: ['.ts', '.tsx', '.d.ts', '.js', '.mjs', '.cjs', '.json'],
     },
   },
 };

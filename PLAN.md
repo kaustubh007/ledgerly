@@ -206,7 +206,7 @@ the other.
 - **Access token**: JWT via `jose`, 10 min, carries **identity only** (`sub`, `sid`), cookie
   `__Host-at`.
 - **Refresh token**: opaque random 256-bit, stored **hashed** in Mongo, rotated on every use,
-  cookie `__Host-rt` scoped to the refresh route.
+  cookie `__Secure-rt` scoped to `/graphql/auth` (ADR-0005: `__Host-` cannot have a path).
 - **Reuse detection with a grace window**: a rotated token presented again within **20 s**
   returns the _same_ successor (concurrent tabs refreshing at once); after the grace window a
   reuse revokes the whole session family. Refresh is also serialised in the browser with a
@@ -330,16 +330,16 @@ adding locales later is mechanical). WCAG 2.2 AA applies in full.
 
 ## 4. Testing strategy
 
-| Tier                  | Tool                                            | Rules                                                                                                                                                                                         |
-| --------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain                | Vitest + fast-check                             | No mocks. Property tests for Money and the state machine. 100 % branch coverage.                                                                                                              |
-| API                   | Vitest + Testcontainers Mongo (**replica set**) | Real database; operations through `server.executeOperation`. Concurrency tests fire parallel `recordPayment` calls and assert no overpayment. Admin: platform-scope tests (below).            |
-| Client components     | Vitest + RTL + user-event + vitest-axe          | Query by role/label; no implementation details; `MockedProvider` + a real Redux store per test.                                                                                               |
-| **Server Components** | —                                               | **RTL cannot render async RSCs.** Rule: RSCs only fetch and compose; logic lives in plain functions (unit-tested) and client components (RTL-tested). RSC behaviour is covered by Playwright. |
-| Admin console         | Vitest + RTL + MSW + `createMemoryRouter`       | MSW GraphQL handlers sit in front of the real RTK Query API slice and a real store; route tests render the real route tree in a memory router and assert loaders, guards and error elements.  |
-| E2E                   | Playwright + axe                                | Critical paths per phase; axe (incl. contrast) on every route in all three locales (admin: English).                                                                                          |
-| Contract              | Vitest                                          | zod ↔ GraphQL input drift test (§3.4).                                                                                                                                                        |
-| Infra                 | CDK assertions + `cdk-nag`                      | See §8.                                                                                                                                                                                       |
+| Tier                  | Tool                                            | Rules                                                                                                                                                                                                        |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Domain                | Vitest + fast-check                             | No mocks. Property tests for Money and the state machine. 100 % branch coverage.                                                                                                                             |
+| API                   | Vitest + Testcontainers Mongo (**replica set**) | Real database; operations over real HTTP (cookies, headers, CSRF prevention included). Concurrency tests fire parallel `recordPayment` calls and assert no overpayment. Admin: platform-scope tests (below). |
+| Client components     | Vitest + RTL + user-event + vitest-axe          | Query by role/label; no implementation details; `MockedProvider` + a real Redux store per test.                                                                                                              |
+| **Server Components** | —                                               | **RTL cannot render async RSCs.** Rule: RSCs only fetch and compose; logic lives in plain functions (unit-tested) and client components (RTL-tested). RSC behaviour is covered by Playwright.                |
+| Admin console         | Vitest + RTL + MSW + `createMemoryRouter`       | MSW GraphQL handlers sit in front of the real RTK Query API slice and a real store; route tests render the real route tree in a memory router and assert loaders, guards and error elements.                 |
+| E2E                   | Playwright + axe                                | Critical paths per phase; axe (incl. contrast) on every route in all three locales (admin: English).                                                                                                         |
+| Contract              | Vitest                                          | zod ↔ GraphQL input drift test (§3.4).                                                                                                                                                                       |
+| Infra                 | CDK assertions + `cdk-nag`                      | See §8.                                                                                                                                                                                                      |
 
 ---
 
@@ -360,7 +360,7 @@ next phase.
 | 6   | Component craft & performance  | Class lifecycle (error boundary), HOC vs hooks vs render props, **manual memoisation with the React Compiler off → measure → compiler on → measure**, virtualisation, code-splitting                                               | Profiler numbers for all three states committed in the learning note; Lighthouse ≥ 90                                                                                                                                                                                                           |
 | 7   | Theming, a11y, i18n            | SCSS architecture, tokens, dark/high-contrast, nonce'd brand styles, AA audit, RTL, ICU, customer-locale documents                                                                                                                 | axe zero violations on all routes × 3 locales in Playwright; manual audit checklist signed off                                                                                                                                                                                                  |
 | 8   | Security, privacy & AWS        | Threat model, CSP/headers, tenant TOTP MFA, rate limits, audit log, account deletion/export; CDK (VPC, ECS, CloudFront, S3, SES, SQS/Lambda, Secrets Manager, X-Ray)                                                               | ZAP baseline clean (both origins); `cdk-nag` clean; threat model + cost estimate in `docs/`                                                                                                                                                                                                     |
-| S1  | _Stretch_ Cognito              | Replacing hand-rolled auth behind the same `AuthProvider` port                                                                                                                                                                     | ADR-0005 + working spike branch                                                                                                                                                                                                                                                                 |
+| S1  | _Stretch_ Cognito              | Replacing hand-rolled auth behind the same `AuthProvider` port                                                                                                                                                                     | New ADR + working spike branch                                                                                                                                                                                                                                                                  |
 | S2  | _Stretch_ Subscriptions        | graphql-ws, Redis fan-out                                                                                                                                                                                                          | Two API tasks, event delivered to both clients                                                                                                                                                                                                                                                  |
 
 **Effort estimate** (evenings/weekends, ~8 h/week): Phase 1 ≈ 1 week, 2 ≈ 3, 3 ≈ 2, 4 ≈ 3,
@@ -435,7 +435,8 @@ Example story:
 - **ADR-0003** Hand-rolled session auth with rotating refresh tokens (Cognito deferred to S1).
 - **ADR-0004** Platform admin console: separate origin, schema and identity; audited platform
   scope (revision 3).
-- ADR-0005 (S1) Cognito, if the stretch is taken.
+- **ADR-0005** Refresh cookie is `__Secure-rt` on `/graphql/auth` (amends ADR-0003; Phase 2).
+- Cognito (S1) takes the next free number if the stretch is taken.
 
 ---
 

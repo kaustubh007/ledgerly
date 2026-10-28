@@ -6,3 +6,10 @@ packages:
 # This is what turns "typescript@latest" into a red Renovate PR instead of a broken lint run.
 strictPeerDependencies: true
 engineStrict: true
+# pnpm 12 blocks dependency install scripts unless listed. None of these is needed: two print
+# protobuf notices, two are optional native SSH helpers that Testcontainers can do without.
+allowBuilds:
+  '@apollo/protobufjs': false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

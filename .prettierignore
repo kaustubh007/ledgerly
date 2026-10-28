@@ -5,3 +5,6 @@ dist
 
 # Accepted ADRs are immutable (superseded, never edited), including whitespace.
 docs/adr
+
+# Generated; checked for freshness by `codegen:check`, so it must stay byte-for-byte as generated.
+**/__generated__

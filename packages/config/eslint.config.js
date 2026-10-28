@@ -20,6 +20,9 @@ export function createConfig({ tsconfigRootDir }) {
         '@typescript-eslint/consistent-type-imports': 'error',
         '@typescript-eslint/switch-exhaustiveness-check': 'error',
         '@typescript-eslint/no-non-null-assertion': 'error',
+        // `_name` marks a parameter that must exist for its position (e.g. Express's 4-arg
+        // error handler) but is not used.
+        '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
         'no-restricted-syntax': [
           'error',
           {

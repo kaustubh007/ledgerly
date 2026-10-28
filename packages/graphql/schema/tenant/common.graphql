@@ -1,0 +1,31 @@
+"""
+A domain or validation refusal. Mutations return these as data; GraphQL errors are reserved for
+authentication, authorisation, malformed requests and server faults.
+"""
+type UserError {
+  "Stable, machine-readable, e.g. `OVERPAYMENT`."
+  code: String!
+  message: String!
+  "Path to the offending input field, e.g. `[\"input\", \"lines\", \"2\", \"unitPrice\"]`."
+  field: [String!]
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type Money {
+  "Integer minor units (cents, fils, yen)."
+  amountMinor: BigInt!
+  "ISO 4217 code."
+  currency: String!
+  "Exact decimal string, e.g. `\"12.30\"`. Format it with `Intl.NumberFormat`."
+  amount: String!
+}
+
+input MoneyInput {
+  "Plain decimal string with no more decimals than the currency allows, e.g. `\"12.30\"`."
+  amount: String!
+  currency: String!
+}

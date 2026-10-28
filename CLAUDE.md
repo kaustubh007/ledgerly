@@ -12,6 +12,8 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - `make up` / `make down` — local infrastructure (MongoDB replica set, OTel collector, Jaeger)
 - `make smoke` — proves the replica set, a transaction, and tracing end to end
 - `make up-aws` — adds LocalStack (needs `LOCALSTACK_AUTH_TOKEN`)
+- `make env` / `make api` / `make smoke-api` — dev keys, run the API, prove tracing end to end
+- `pnpm --filter @ledgerly/api codegen` — regenerate resolver types after a schema change
 
 ## Non-negotiable rules
 
@@ -27,6 +29,9 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - Roles are loaded per request, never read from token claims.
 - Tokens never touch `localStorage` or JS-readable cookies.
 - GraphQL types are separate from domain types and Mongoose documents (codegen mappers).
+- Every tenant schema declares `orgId: tenantOrgId` and uses `tenantGuard`. Every new Query or
+  Mutation field must be covered by `apps/api/test/tenant-leak.test.ts` (the suite enforces it).
+- Mongoose query chains end in `.exec()`; raw driver access only in `apps/api/src/data/`.
 - Never commit a red build. Never leave a TODO in a completed phase.
 
 ## Style

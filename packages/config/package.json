@@ -5,8 +5,14 @@
   "type": "module",
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./eslint": "./eslint.config.js",
-    "./vitest": "./vitest.config.js"
+    "./eslint": {
+      "types": "./eslint.config.d.ts",
+      "default": "./eslint.config.js"
+    },
+    "./vitest": {
+      "types": "./vitest.config.d.ts",
+      "default": "./vitest.config.js"
+    }
   },
   "dependencies": {
     "@eslint/js": "10.0.1",

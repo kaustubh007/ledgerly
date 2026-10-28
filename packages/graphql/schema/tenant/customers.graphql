@@ -1,0 +1,43 @@
+type Customer {
+  id: ID!
+  name: String!
+  email: String
+  defaultCurrency: String!
+  "BCP 47 locale for documents sent to this customer, e.g. `de-DE`."
+  documentLocale: String!
+  billingAddress: String
+  createdAt: DateTime!
+}
+
+type CustomerEdge {
+  cursor: String!
+  node: Customer!
+}
+
+type CustomerConnection {
+  edges: [CustomerEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CustomerInput {
+  name: String!
+  email: String
+  defaultCurrency: String!
+  documentLocale: String!
+  billingAddress: String
+}
+
+type CustomerPayload {
+  customer: Customer
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  customers(first: Int = 20, after: String, search: String): CustomerConnection!
+  customer(id: ID!): Customer
+}
+
+extend type Mutation {
+  createCustomer(input: CustomerInput!): CustomerPayload!
+  updateCustomer(id: ID!, input: CustomerInput!): CustomerPayload!
+}

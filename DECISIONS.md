@@ -2,6 +2,76 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Phase 2 (2026-10-28)
+
+- **Refresh cookie is `__Secure-rt` on `/graphql/auth`** (ADR-0005). ADR-0003's `__Host-rt` with
+  a narrow path is a combination browsers reject.
+- **Refresh and logout are REST** (`POST /graphql/auth/refresh|logout`), inside the `/graphql*`
+  route of ADR-0001, and require an `x-ledgerly-csrf` header on top of SameSite.
+- **Session revocation is immediate.** Each request checks that the access token's session is
+  still live (one indexed lookup), so a revoked or reused session stops working before its
+  10-minute access token expires.
+- **Reuse detection keeps the last 20 retired refresh hashes** per session, so reuse of a token
+  older than the immediate predecessor is detected too, not just treated as unknown.
+- **Global (non-tenant) collections:** users, sessions, organizations, memberships,
+  one-time tokens, rate limits, outbox. Memberships are global because "which orgs am I in?"
+  crosses tenants; every org-scoped membership query filters by the context org explicitly and
+  lives only in `features/organizations`.
+- **Tenant collections declare `orgId: tenantOrgId` explicitly**, and the guard refuses to
+  attach to a schema without it. The plan had the plugin add the field, which left it out of the
+  inferred TypeScript types.
+- **Tenant guard extras beyond the plan:** refuses `estimatedDocumentCount`, `bulkWrite`,
+  `$unionWith`, `$graphLookup`, `$out`, `$merge`, `$documents`; checks `$lookup` inside `$facet`;
+  refuses a filter naming another org rather than silently overriding it.
+- **ESLint guards the tenant guard:** outside `src/data/`, `Model.collection`, `mongoose.mongo`,
+  `mongoose.connection` and `$lookup` literals are lint errors.
+- **Every Mongoose query chain ends in `.exec()`** (lint rule). Found the hard way: GraphQL-js
+  may call `.then` twice on a resolver's return value, and a Mongoose `Query` runs only once.
+- **`transactionAsyncLocalStorage`** is on: inside `connection.transaction()`, every model call
+  joins the transaction without passing `{ session }`.
+- **`useBigInt64`** on the connection: int64 comes back as `bigint` everywhere (fixes the BSON
+  `Long` gotcha recorded in Phase 1). `strictQuery: 'throw'` makes an unknown filter key an error.
+- **Idempotency stores the outcome (`{ ok, id }` or `{ ok: false, userErrors }`), not the
+  response body.** Replays re-read the entity, so the replayed response is current. Keys are
+  unique per organisation, hashed with operation + user + input.
+- **Invoice numbers are `INV-{year}-{seq:00000}` with one sequence per organisation**, not per
+  year; the year in the number is the send year.
+- **Email goes through a transactional outbox** (`outbox` collection), written in the same
+  transaction as its cause. Nothing sends yet; Phase 8 adds the SQS → Lambda → SES dispatcher.
+  Until then, dev links can be read from the collection.
+- **Rate limits are fixed windows in MongoDB** (shared across API tasks): log-in 10/15 min per
+  email and 100/15 min per IP; sign-up 20/h per IP; password reset 5/h per email.
+- **Sign-up reveals that an email is taken** (`EMAIL_TAKEN`). Accepted trade-off for a clear
+  form error; log-in and password reset do not reveal it.
+- **Password policy:** 12–128 characters, no composition rules (NIST SP 800-63B). argon2id with
+  OWASP parameters (19 MiB, t=2, p=1); a dummy hash is verified when the email is unknown.
+- **Query limits:** depth 12 and 20 aliases, as hand-written GraphQL validation rules.
+  `@escape.tech/graphql-armor` was considered; its peer dependencies (`@envelop/core`) fail
+  `strictPeerDependencies`, and two short rules are clearer to learn from.
+- **API tests go over real HTTP** with a cookie jar that honours `Path` and `Max-Age`, against a
+  Testcontainers MongoDB 9.0.4 replica set, one database per test file. The plan said
+  `executeOperation`, which would skip cookies, headers and CSRF prevention.
+- **The tenant-leak suite enumerates the schema:** every Query and Mutation field must be
+  exercised by the suite or be listed as not tenant-scoped, so a new resolver fails CI until it
+  is covered.
+- **Contract test (PLAN §3.4) checks field names and required-ness** of every GraphQL input type
+  against its zod twin.
+- **Vitest resolves workspace packages to source** with `ssr.resolve.conditions` as well as
+  `resolve.conditions`. Phase 1 set only the latter, which Vitest's Node runs ignore; nothing
+  caught it because no Phase 1 test crossed a package boundary.
+- **pnpm 12 blocks dependency build scripts**; the four packages that have them are listed as
+  not allowed in `pnpm-workspace.yaml` (none is needed).
+- **Mongoose 9 deprecates `new: true`**; we use `returnDocument: 'after'`.
+- **Collector exporter renamed** `otlp` → `otlp_grpc` (deprecated alias in collector 0.164).
+- **Jaeger 2.x query API is `/api/v3`**; `scripts/smoke-api.sh` uses it.
+- **Request logs:** one `request` line per request with method, path, status, duration,
+  `requestId`, `userId`, `orgId` and `traceId`. Cookies, tokens, passwords and emails are
+  redacted.
+- **CI** checks that generated resolver types are up to date, runs the API tests (Docker is on the
+  runner), and starts the built API against the compose stack to run `smoke-api.sh`.
+- **Not done in Phase 2:** the outbox dispatcher (Phase 8), org time-zone editing (no mutation
+  yet; defaults to UTC), customer deletion, invoice PDFs, `updateCustomer` currency-change rules.
+
 ## Plan revision 3 (2026-10-28, during Phase 1 review)
 
 - **Option A chosen by the owner:** keep Next.js for the tenant product and add a platform admin

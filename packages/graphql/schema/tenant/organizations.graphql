@@ -1,0 +1,57 @@
+"The organisation selected by the `x-org` request header."
+type Organization {
+  id: ID!
+  slug: String!
+  name: String!
+  "IANA time zone; decides what 'overdue' means for this organisation."
+  timeZone: String!
+  viewerRole: Role!
+  "Requires `members:manage`."
+  members: [Member!]!
+  "Requires `members:manage`."
+  invitations: [Invitation!]!
+}
+
+type Member {
+  userId: ID!
+  name: String!
+  email: String!
+  role: Role!
+  joinedAt: DateTime!
+}
+
+type Invitation {
+  id: ID!
+  email: String!
+  role: Role!
+  expiresAt: DateTime!
+}
+
+type OrganizationPayload {
+  organization: OrganizationSummary
+  userErrors: [UserError!]!
+}
+
+type InvitationPayload {
+  invitation: Invitation
+  userErrors: [UserError!]!
+}
+
+type MemberPayload {
+  member: Member
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  organization: Organization
+}
+
+extend type Mutation {
+  "Creates another organisation with the viewer as OWNER."
+  createOrganization(name: String!): OrganizationPayload!
+  inviteMember(email: String!, role: Role!): InvitationPayload!
+  "Accepted by the signed-in user whose email matches the invitation."
+  acceptInvitation(token: String!): OrganizationPayload!
+  changeMemberRole(userId: ID!, role: Role!): MemberPayload!
+  removeMember(userId: ID!): OkPayload!
+}

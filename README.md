@@ -8,11 +8,12 @@ A multi-tenant invoicing SaaS built in phases as a production-grade learning pro
 
 ## Status
 
-| Phase        | State                                   |
-| ------------ | --------------------------------------- |
-| 0 Plan       | done                                    |
-| 1 Foundation | in review                               |
-| 2–8          | planned (5 = admin console, revision 3) |
+| Phase                            | State                                   |
+| -------------------------------- | --------------------------------------- |
+| 0 Plan                           | done                                    |
+| 1 Foundation                     | done                                    |
+| 2 API, data, auth, observability | in review                               |
+| 3–8                              | planned (5 = admin console, revision 3) |
 
 ## Getting started
 
@@ -24,6 +25,9 @@ pnpm install
 pnpm check      # format, lint, typecheck, tests with coverage, architecture rules
 make up         # MongoDB replica set, OpenTelemetry collector, Jaeger (http://localhost:16686)
 make smoke      # proves transactions and tracing work
+make env        # creates .env with generated dev keys
+make api        # the GraphQL API on http://localhost:4000/graphql
+make smoke-api  # with the API running: one request, traced end to end in Jaeger
 ```
 
 `make up-aws` also starts LocalStack (S3, SQS, SES, Lambda) and needs `LOCALSTACK_AUTH_TOKEN`

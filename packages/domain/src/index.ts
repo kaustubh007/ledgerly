@@ -34,3 +34,14 @@ export { lineTotal, type LineItem } from './invoice/line-item.ts';
 export { InvalidQuantityError, Quantity } from './invoice/quantity.ts';
 export { DomainError } from './shared/domain-error.ts';
 export { err, ok, type Err, type Ok, type Result } from './shared/result.ts';
+export {
+  assignableRoles,
+  can,
+  checkMembershipChange,
+  isRole,
+  Permission,
+  permissionsOf,
+  Role,
+  type MembershipChange,
+  type MembershipChangeRefusal,
+} from './access/permissions.ts';
