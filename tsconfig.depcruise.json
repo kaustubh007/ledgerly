@@ -1,0 +1,5 @@
+{
+  "extends": "@ledgerly/config/tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "composite": false },
+  "include": ["apps/*/src", "packages/*/src"]
+}

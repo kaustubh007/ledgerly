@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", "helpers:pinGitHubActionDigests"],
+  "rangeStrategy": "pin",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "packageRules": [
+    {
+      "description": "Held back by peer ranges (CLAUDE.md). pnpm strictPeerDependencies makes these PRs fail until the blocking package widens its range; merge them when they go green.",
+      "matchPackageNames": ["typescript", "graphql"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": false,
+      "labels": ["held-by-peer-range"]
+    },
+    {
+      "description": "Node stays on LTS. Bump .nvmrc and engines only when the next even release reaches LTS.",
+      "matchDepNames": ["node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Test and lint tooling together, so a vitest bump and its coverage plugin never split.",
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    },
+    {
+      "matchPackageNames": ["eslint", "@eslint/**", "typescript-eslint", "eslint-config-prettier"],
+      "groupName": "eslint"
+    }
+  ]
+}

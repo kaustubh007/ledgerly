@@ -5,7 +5,7 @@ Status: **Phase 0 approved 2026-10-28.** All recommendations in §11 accepted; s
 Revision 2 incorporates the independent architecture review (19 findings). §10 maps every
 finding to where it is addressed.
 
-Ledgerly is a multi-tenant invoicing SaaS built as a *learning vehicle*: every phase exists to
+Ledgerly is a multi-tenant invoicing SaaS built as a _learning vehicle_: every phase exists to
 teach a specific set of skills, and every phase ends with a `docs/learn/phase-N.md` note that
 explains what was built, why, the trade-offs, and a short retro. It is still built to production
 standards — the point is to learn the version of each skill that survives a real code review.
@@ -18,29 +18,30 @@ standards — the point is to learn the version of each skill that survives a re
 
 Everything is on current stable **except** where a peer dependency forbids it:
 
-| Package | `latest` | We pin | Why |
-|---|---|---|---|
-| `typescript` | 7.0.2 | **~6.0** | `typescript-eslint@8.72` declares `typescript >=4.8.4 <6.1.0`. TS 7 (native Go compiler) breaks the lint toolchain. |
-| `graphql` | 17.0.2 | **^16.14** | `@apollo/server@5.5` declares `graphql ^16.11.0`. Web and API share one `graphql` in the monorepo. |
-| Node | 26.12.1 (Current) | **24 LTS** | Production runs LTS. Move to 26 when it is promoted to LTS. |
+| Package      | `latest`          | We pin     | Why                                                                                                                 |
+| ------------ | ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| `typescript` | 7.0.2             | **~6.0**   | `typescript-eslint@8.72` declares `typescript >=4.8.4 <6.1.0`. TS 7 (native Go compiler) breaks the lint toolchain. |
+| `graphql`    | 17.0.2            | **^16.14** | `@apollo/server@5.5` declares `graphql ^16.11.0`. Web and API share one `graphql` in the monorepo.                  |
+| Node         | 26.12.1 (Current) | **24 LTS** | Production runs LTS. Move to 26 when it is promoted to LTS.                                                         |
 
-Each pin carries a comment in `package.json`; Renovate opens the bump PR the day the blocking
-peer range widens.
+Each pin carries a comment in `package.json`. Renovate opens the major bump PR straight away;
+`strictPeerDependencies` keeps it red until the blocking package widens its range, and it is
+merged when it goes green (corrected in Phase 1, see `DECISIONS.md`).
 
-| Area | Package | Version |
-|---|---|---|
-| Web | `next` / `react` | 16.4.x / 19.3.x (App Router, RSC; note Next 16 renamed `middleware.ts` → **`proxy.ts`**) |
-| GraphQL client | `@apollo/client` + `@apollo/client-integration-nextjs` | 4.3.x / 0.14.x |
-| GraphQL server | `@apollo/server` | 5.5.x |
-| State | `@reduxjs/toolkit` / `react-redux` | 2.13.x |
-| DB | `mongoose` | 9.11.x on MongoDB 8 (**replica set**, see §3.5) |
-| Auth | `jose`, `@node-rs/argon2`, `otplib` | current |
-| i18n | `next-intl` | 4.14.x |
-| Styling | `sass` | 1.106.x |
-| Codegen | `@graphql-codegen/cli` | 7.4.x |
-| Logging / tracing | `pino`, `@opentelemetry/sdk-node` | current stable |
-| Tests | `vitest` 5, `@testing-library/react` 16, `user-event`, `vitest-axe`, `fast-check`, `@testcontainers/mongodb`, `@playwright/test` (container build), `@axe-core/playwright` | |
-| IaC | `aws-cdk-lib` 2.x, `cdk-nag` | |
+| Area              | Package                                                                                                                                                                    | Version                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Web               | `next` / `react`                                                                                                                                                           | 16.4.x / 19.3.x (App Router, RSC; note Next 16 renamed `middleware.ts` → **`proxy.ts`**) |
+| GraphQL client    | `@apollo/client` + `@apollo/client-integration-nextjs`                                                                                                                     | 4.3.x / 0.14.x                                                                           |
+| GraphQL server    | `@apollo/server`                                                                                                                                                           | 5.5.x                                                                                    |
+| State             | `@reduxjs/toolkit` / `react-redux`                                                                                                                                         | 2.13.x                                                                                   |
+| DB                | `mongoose`                                                                                                                                                                 | 9.11.x on MongoDB 9.0 (**replica set**, see §3.5)                                        |
+| Auth              | `jose`, `@node-rs/argon2`, `otplib`                                                                                                                                        | current                                                                                  |
+| i18n              | `next-intl`                                                                                                                                                                | 4.14.x                                                                                   |
+| Styling           | `sass`                                                                                                                                                                     | 1.106.x                                                                                  |
+| Codegen           | `@graphql-codegen/cli`                                                                                                                                                     | 7.4.x                                                                                    |
+| Logging / tracing | `pino`, `@opentelemetry/sdk-node`                                                                                                                                          | current stable                                                                           |
+| Tests             | `vitest` 5, `@testing-library/react` 16, `user-event`, `vitest-axe`, `fast-check`, `@testcontainers/mongodb`, `@playwright/test` (container build), `@axe-core/playwright` |                                                                                          |
+| IaC               | `aws-cdk-lib` 2.x, `cdk-nag`                                                                                                                                               |                                                                                          |
 
 ---
 
@@ -136,7 +137,7 @@ docs/adr/     MADR records    docs/learn/  per-phase learning notes
 
 ### 3.4 Validation — two schemas, named on purpose
 
-GraphQL SDL defines *shape*; zod defines *business validation* (lengths, formats, ranges) and is
+GraphQL SDL defines _shape_; zod defines _business validation_ (lengths, formats, ranges) and is
 shared by forms and resolvers. These can drift. Mitigation: a contract test generates a valid and
 an invalid example per input type from the zod schema and runs both through the real GraphQL
 schema. Accepted trade-off for a learning project; a stretch item evaluates deriving one from
@@ -152,7 +153,7 @@ the other.
 - **Idempotency**: every state-changing mutation accepts an `idempotencyKey` (UUID generated
   when the form opens). Stored in `idempotency_keys` with a unique index on
   `(orgId, key)` and the stored response, TTL 24 h. A replay returns the original result; a
-  replay with a *different* payload returns `IDEMPOTENCY_KEY_REUSED`.
+  replay with a _different_ payload returns `IDEMPOTENCY_KEY_REUSED`.
 - **Invoice numbers**: allocated when an invoice is **sent**, not drafted — drafts get no number,
   so deleted drafts never leave gaps. `counters` collection, `{orgId, name:'invoice', seq}`,
   incremented with `findOneAndUpdate({$inc:{seq:1}})` inside the send transaction. Unique index
@@ -174,8 +175,8 @@ the other.
      sub-pipeline; a lint rule bans `$lookup` literals outside it.
   3. The raw driver is only reachable from `apps/api/src/data/` (dependency-cruiser), and that
      layer is reviewed as security-critical code.
-  The tenant-leak suite seeds two orgs and asserts every query, mutation, **and dashboard
-  aggregation** returns only the caller's data.
+     The tenant-leak suite seeds two orgs and asserts every query, mutation, **and dashboard
+     aggregation** returns only the caller's data.
 - **Authorisation** uses the membership loaded per request (DataLoader-cached), **not** claims
   in the token. A role change or removal takes effect on the next request.
 
@@ -187,7 +188,7 @@ the other.
 - **Refresh token**: opaque random 256-bit, stored **hashed** in Mongo, rotated on every use,
   cookie `__Host-rt` scoped to the refresh route.
 - **Reuse detection with a grace window**: a rotated token presented again within **20 s**
-  returns the *same* successor (concurrent tabs refreshing at once); after the grace window a
+  returns the _same_ successor (concurrent tabs refreshing at once); after the grace window a
   reuse revokes the whole session family. Refresh is also serialised in the browser with a
   single in-flight promise and a `BroadcastChannel` so tabs share one refresh.
 - Sessions are listable and revocable ("sign out other devices").
@@ -198,13 +199,13 @@ the other.
 
 ### 3.8 Where client state lives
 
-| Kind of state | Owner |
-|---|---|
-| Server data | Apollo Client normalized cache |
-| URL state (org, filters, page, sort) | The URL |
-| Form state | `react-hook-form` + shared zod schema |
+| Kind of state                                                                            | Owner                                                                                                             |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Server data                                                                              | Apollo Client normalized cache                                                                                    |
+| URL state (org, filters, page, sort)                                                     | The URL                                                                                                           |
+| Form state                                                                               | `react-hook-form` + shared zod schema                                                                             |
 | Cross-cutting UI state (theme, sidebar, toasts, multi-step invoice wizard, session view) | Redux Toolkit (store created **per request** inside a client provider — never a module-level singleton under SSR) |
-| Component-local | `useState` / `useReducer` |
+| Component-local                                                                          | `useState` / `useReducer`                                                                                         |
 
 Redux middleware is taught where it has a real job: a listener middleware persisting theme and
 locale to a cookie, and a custom middleware feeding the audit/analytics stream. The learning note
@@ -261,15 +262,15 @@ skipped, the UI polls the dashboard query every 30 s instead.
 
 ## 4. Testing strategy
 
-| Tier | Tool | Rules |
-|---|---|---|
-| Domain | Vitest + fast-check | No mocks. Property tests for Money and the state machine. 100 % branch coverage. |
-| API | Vitest + Testcontainers Mongo (**replica set**) | Real database; operations through `server.executeOperation`. Concurrency tests fire parallel `recordPayment` calls and assert no overpayment. |
-| Client components | Vitest + RTL + user-event + vitest-axe | Query by role/label; no implementation details; `MockedProvider` + a real Redux store per test. |
-| **Server Components** | — | **RTL cannot render async RSCs.** Rule: RSCs only fetch and compose; logic lives in plain functions (unit-tested) and client components (RTL-tested). RSC behaviour is covered by Playwright. |
-| E2E | Playwright + axe | Critical paths per phase; axe (incl. contrast) on every route in all three locales. |
-| Contract | Vitest | zod ↔ GraphQL input drift test (§3.4). |
-| Infra | CDK assertions + `cdk-nag` | See §8. |
+| Tier                  | Tool                                            | Rules                                                                                                                                                                                         |
+| --------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain                | Vitest + fast-check                             | No mocks. Property tests for Money and the state machine. 100 % branch coverage.                                                                                                              |
+| API                   | Vitest + Testcontainers Mongo (**replica set**) | Real database; operations through `server.executeOperation`. Concurrency tests fire parallel `recordPayment` calls and assert no overpayment.                                                 |
+| Client components     | Vitest + RTL + user-event + vitest-axe          | Query by role/label; no implementation details; `MockedProvider` + a real Redux store per test.                                                                                               |
+| **Server Components** | —                                               | **RTL cannot render async RSCs.** Rule: RSCs only fetch and compose; logic lives in plain functions (unit-tested) and client components (RTL-tested). RSC behaviour is covered by Playwright. |
+| E2E                   | Playwright + axe                                | Critical paths per phase; axe (incl. contrast) on every route in all three locales.                                                                                                           |
+| Contract              | Vitest                                          | zod ↔ GraphQL input drift test (§3.4).                                                                                                                                                        |
+| Infra                 | CDK assertions + `cdk-nag`                      | See §8.                                                                                                                                                                                       |
 
 ---
 
@@ -278,18 +279,18 @@ skipped, the UI polls the dashboard query every 30 s instead.
 Phases 7 and 8 from revision 1 are merged. Stretch items are fully designed but optional; skipping
 one never blocks the next phase.
 
-| # | Phase | You learn | Gate |
-|---|---|---|---|
-| 0 | **This plan** + ADR-0001..0003 | Architecture, trade-offs, agile backlog | You approve §11 |
-| 1 | Monorepo foundation | TS project references, strict config, pnpm/Turbo, ESLint, Vitest, GitHub Actions, Docker Compose (Mongo **rs0**, OTel collector + Jaeger, LocalStack) | CI green; domain Money + state machine at 100 % branch coverage; dependency-cruiser rules enforced |
-| 2 | API, data, auth, observability | Apollo Server, schema-first + codegen mappers, Mongoose, transactions, idempotency, DataLoader, AsyncLocalStorage tenancy, JWT + refresh rotation w/ grace window, RBAC, pino + OTel | Tenant-leak suite (incl. aggregations) passes; concurrent-payment test passes; traces visible in Jaeger |
-| 3 | Web shell | App Router, RSC vs client components, layouts, `proxy.ts`, org-scoped routing + org switcher, Redux store per request + middleware, Apollo SSR integration, cookie forwarding, single-flight refresh | Logged-in shell in 2 orgs in 2 tabs; RTL tests for slices, providers, guards |
-| 4 | Core features | TSX patterns, custom hooks, `useReducer`, `useOptimistic`, forms, optimistic mutations + cache updates, idempotency keys from forms, plans & limits (`BillingGatewaySimulator`) | Playwright: create → send (numbered) → pay an invoice; double-submit records one payment; plan limit enforced |
-| 5 | Component craft & performance | Class lifecycle (error boundary), HOC vs hooks vs render props, **manual memoisation with the React Compiler off → measure → compiler on → measure**, virtualisation, code-splitting | Profiler numbers for all three states committed in the learning note; Lighthouse ≥ 90 |
-| 6 | Theming, a11y, i18n | SCSS architecture, tokens, dark/high-contrast, nonce'd brand styles, AA audit, RTL, ICU, customer-locale documents | axe zero violations on all routes × 3 locales in Playwright; manual audit checklist signed off |
-| 7 | Security, privacy & AWS | Threat model, CSP/headers, TOTP MFA, rate limits, audit log, account deletion/export; CDK (VPC, ECS, CloudFront, S3, SES, SQS/Lambda, Secrets Manager, X-Ray) | ZAP baseline clean; `cdk-nag` clean; threat model + cost estimate in `docs/` |
-| S1 | *Stretch* Cognito | Replacing hand-rolled auth behind the same `AuthProvider` port | ADR-0004 + working spike branch |
-| S2 | *Stretch* Subscriptions | graphql-ws, Redis fan-out | Two API tasks, event delivered to both clients |
+| #   | Phase                          | You learn                                                                                                                                                                                            | Gate                                                                                                          |
+| --- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 0   | **This plan** + ADR-0001..0003 | Architecture, trade-offs, agile backlog                                                                                                                                                              | You approve §11                                                                                               |
+| 1   | Monorepo foundation            | TS project references, strict config, pnpm/Turbo, ESLint, Vitest, GitHub Actions, Docker Compose (Mongo **rs0**, OTel collector + Jaeger, LocalStack)                                                | CI green; domain Money + state machine at 100 % branch coverage; dependency-cruiser rules enforced            |
+| 2   | API, data, auth, observability | Apollo Server, schema-first + codegen mappers, Mongoose, transactions, idempotency, DataLoader, AsyncLocalStorage tenancy, JWT + refresh rotation w/ grace window, RBAC, pino + OTel                 | Tenant-leak suite (incl. aggregations) passes; concurrent-payment test passes; traces visible in Jaeger       |
+| 3   | Web shell                      | App Router, RSC vs client components, layouts, `proxy.ts`, org-scoped routing + org switcher, Redux store per request + middleware, Apollo SSR integration, cookie forwarding, single-flight refresh | Logged-in shell in 2 orgs in 2 tabs; RTL tests for slices, providers, guards                                  |
+| 4   | Core features                  | TSX patterns, custom hooks, `useReducer`, `useOptimistic`, forms, optimistic mutations + cache updates, idempotency keys from forms, plans & limits (`BillingGatewaySimulator`)                      | Playwright: create → send (numbered) → pay an invoice; double-submit records one payment; plan limit enforced |
+| 5   | Component craft & performance  | Class lifecycle (error boundary), HOC vs hooks vs render props, **manual memoisation with the React Compiler off → measure → compiler on → measure**, virtualisation, code-splitting                 | Profiler numbers for all three states committed in the learning note; Lighthouse ≥ 90                         |
+| 6   | Theming, a11y, i18n            | SCSS architecture, tokens, dark/high-contrast, nonce'd brand styles, AA audit, RTL, ICU, customer-locale documents                                                                                   | axe zero violations on all routes × 3 locales in Playwright; manual audit checklist signed off                |
+| 7   | Security, privacy & AWS        | Threat model, CSP/headers, TOTP MFA, rate limits, audit log, account deletion/export; CDK (VPC, ECS, CloudFront, S3, SES, SQS/Lambda, Secrets Manager, X-Ray)                                        | ZAP baseline clean; `cdk-nag` clean; threat model + cost estimate in `docs/`                                  |
+| S1  | _Stretch_ Cognito              | Replacing hand-rolled auth behind the same `AuthProvider` port                                                                                                                                       | ADR-0004 + working spike branch                                                                               |
+| S2  | _Stretch_ Subscriptions        | graphql-ws, Redis fan-out                                                                                                                                                                            | Two API tasks, event delivered to both clients                                                                |
 
 **Effort estimate** (evenings/weekends, ~8 h/week): Phase 1 ≈ 1 week, 2 ≈ 3, 3 ≈ 2, 4 ≈ 3,
 5 ≈ 2, 6 ≈ 2, 7 ≈ 3 → **about 16 weeks**, plus 1–2 weeks per stretch.
@@ -331,6 +332,7 @@ Example story:
 
 > **E4-3 Record a payment.** As an ACCOUNTANT I can record a payment against a SENT or
 > PARTIALLY_PAID invoice.
+>
 > - Amount must be in the invoice currency; otherwise a field error.
 > - Overpayment rejected, **including when two payments are submitted concurrently**.
 > - Submitting the same form twice (same idempotency key) records one payment.
@@ -386,28 +388,28 @@ entitlements. Plan:
 
 ## 10. Review findings → where addressed
 
-| # | Finding | Addressed in |
-|---|---|---|
-| 1 | Browser → API path undefined | §3.1, ADR-0001 |
-| 2 | Payment race / double-submit | §3.5, §4, E4-3, ADR-0002 |
-| 3 | Invoice numbering undefined | §3.5, ADR-0002 |
-| 4 | Tenant plugin misses aggregate/$lookup/raw driver | §3.6 (three layers), §4 |
-| 5 | Multi-org users / org switching | §2, §3.6, Phase 3 gate, E2 |
-| 6 | Stale roles in JWT | §3.6, §3.7 |
-| 7 | Refresh reuse detection vs concurrent tabs | §3.7 |
-| 8 | Redundant double-submit CSRF; Next 16 `proxy.ts` rename | §3.3, §1, §3.9 |
-| 9 | Nonce CSP vs brand colour; dynamic rendering cost | §3.9, §3.12, §9 |
-| 10 | RSC untestable in RTL; jsdom contrast | §4, §3.11 |
-| 11 | Observability too late | §3.10, Phase 2 |
-| 12 | LocalStack auth/entitlements; NAT and Atlas networking cost | §8 |
-| 13 | Memoisation vs React Compiler ordering | Phase 5 |
-| 14 | MFA in two places | §3.7, §6 (E8 only), Phase 7 |
-| 15 | No SaaS plans/billing | §2, E6, Phase 4 |
-| 16 | No account deletion / data export | §3.9, E7, Phase 7 |
-| 17 | GraphQL vs zod drift | §3.4, §4, §9 |
-| 18 | Subscriptions need a shared bus | §3.13, S2 |
-| 19 | No effort estimate / cut line | §5 |
-| — | Scope: too broad | Phases merged to 0–7; Cognito and subscriptions are stretch S1/S2 |
+| #   | Finding                                                     | Addressed in                                                      |
+| --- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | Browser → API path undefined                                | §3.1, ADR-0001                                                    |
+| 2   | Payment race / double-submit                                | §3.5, §4, E4-3, ADR-0002                                          |
+| 3   | Invoice numbering undefined                                 | §3.5, ADR-0002                                                    |
+| 4   | Tenant plugin misses aggregate/$lookup/raw driver           | §3.6 (three layers), §4                                           |
+| 5   | Multi-org users / org switching                             | §2, §3.6, Phase 3 gate, E2                                        |
+| 6   | Stale roles in JWT                                          | §3.6, §3.7                                                        |
+| 7   | Refresh reuse detection vs concurrent tabs                  | §3.7                                                              |
+| 8   | Redundant double-submit CSRF; Next 16 `proxy.ts` rename     | §3.3, §1, §3.9                                                    |
+| 9   | Nonce CSP vs brand colour; dynamic rendering cost           | §3.9, §3.12, §9                                                   |
+| 10  | RSC untestable in RTL; jsdom contrast                       | §4, §3.11                                                         |
+| 11  | Observability too late                                      | §3.10, Phase 2                                                    |
+| 12  | LocalStack auth/entitlements; NAT and Atlas networking cost | §8                                                                |
+| 13  | Memoisation vs React Compiler ordering                      | Phase 5                                                           |
+| 14  | MFA in two places                                           | §3.7, §6 (E8 only), Phase 7                                       |
+| 15  | No SaaS plans/billing                                       | §2, E6, Phase 4                                                   |
+| 16  | No account deletion / data export                           | §3.9, E7, Phase 7                                                 |
+| 17  | GraphQL vs zod drift                                        | §3.4, §4, §9                                                      |
+| 18  | Subscriptions need a shared bus                             | §3.13, S2                                                         |
+| 19  | No effort estimate / cut line                               | §5                                                                |
+| —   | Scope: too broad                                            | Phases merged to 0–7; Cognito and subscriptions are stretch S1/S2 |
 
 ---
 

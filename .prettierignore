@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+coverage
+dist
+.turbo
+
+# Accepted ADRs are immutable (superseded, never edited), including whitespace.
+docs/adr

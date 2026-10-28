@@ -1,0 +1,56 @@
+# Local infrastructure. The apps run on the host (pnpm dev) and connect to these.
+# Image tags are pinned; Renovate bumps them.
+name: ledgerly
+
+services:
+  mongo:
+    image: mongo:9.0.4
+    # Single-node replica set: multi-document transactions require a replica set (ADR-0002).
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports: ['27017:27017']
+    volumes: ['mongo-data:/data/db']
+    healthcheck:
+      # Initiates the replica set on first start; afterwards just reports its status.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - >-
+          try { rs.status().ok }
+          catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }).ok }
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 5s
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.164.0
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes: ['./infra/local/otel-collector.yaml:/etc/otelcol/config.yaml:ro']
+    ports:
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP
+      - '13133:13133' # health check
+    depends_on: [jaeger]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    ports: ['16686:16686'] # UI only; apps send to the collector, never straight to Jaeger
+
+  # Needs LOCALSTACK_AUTH_TOKEN (free Hobby plan, non-commercial). Started with `make up-aws`.
+  # Only the services the app calls at runtime are emulated; see PLAN §8.1.
+  localstack:
+    image: localstack/localstack:2026.10.4
+    profiles: [aws]
+    ports: ['4566:4566']
+    environment:
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-} # LocalStack refuses to start without it
+      SERVICES: s3,sqs,ses,lambda
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock # Lambda runs functions in sibling containers
+
+volumes:
+  mongo-data:
+  localstack-data:

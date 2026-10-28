@@ -5,12 +5,16 @@ GraphQL, React/Next.js, Redux Toolkit, Apollo, SCSS theming, a11y, i18n, securit
 Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 
 ## Commands
+
 - `pnpm install` — install (Node 24 LTS, pnpm via corepack)
 - `pnpm check` — everything CI runs: format, lint, typecheck, test with coverage, depcruise
 - `pnpm test` — unit tests
-- `make up` / `make down` — local infrastructure (MongoDB replica set, OTel collector, Jaeger, LocalStack)
+- `make up` / `make down` — local infrastructure (MongoDB replica set, OTel collector, Jaeger)
+- `make smoke` — proves the replica set, a transaction, and tracing end to end
+- `make up-aws` — adds LocalStack (needs `LOCALSTACK_AUTH_TOKEN`)
 
 ## Non-negotiable rules
+
 - Money is `Money` from `@ledgerly/domain`: `bigint` minor units plus a `Currency`. A JS `number`
   holding money is a defect.
 - Rounding happens only in `Money.multiplyAndRound` (half-even). `Money` has no division.
@@ -26,12 +30,14 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - Never commit a red build. Never leave a TODO in a completed phase.
 
 ## Style
+
 - Feature-first folders, not layer-first.
 - Strict TypeScript; no `any`, no non-null assertions without a comment saying why.
 - Domain tests use no mocks. API tests use a real MongoDB replica set (Testcontainers).
 - Component tests query by role/label (RTL), and run axe.
 
 ## Pinned versions — do not "upgrade to latest" without checking
+
 - Node **24 LTS** (`.nvmrc`). Node 26 is "Current" until promoted to LTS.
 - TypeScript **~6.0** — `typescript-eslint@8` declares `typescript <6.1.0`; `latest` is 7.x.
 - `graphql` **^16** — `@apollo/server@5` declares `graphql ^16.11.0`; `latest` is 17.x.
@@ -40,6 +46,7 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
   for S3/SQS/SES/Lambda. Everything else in infra is verified by CDK assertions and cdk-nag.
 
 ## Process
+
 - Phases and gates are in `PLAN.md`. Complete one phase, report honestly on what works, what is
   partial, and what was skipped, then stop for review.
 - Each phase ends with `docs/learn/phase-N.md`: what was built, why, trade-offs, what to study,
