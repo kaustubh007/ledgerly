@@ -7,7 +7,8 @@ Decisions the plan did not specify, or that were made in review. Newest first wi
 - **Option A chosen by the owner:** keep Next.js for the tenant product and add a platform admin
   console built with Vite + React Router 8 (data mode) + Redux Toolkit/RTK Query, so plain React
   routing and Redux-owned server state are both learned. Inserted as Phase 5; later phases
-  renumbered 6–8. PLAN §3.14 and ADR-0004 (status **proposed**, awaiting owner review).
+  renumbered 6–8. PLAN §3.14 and ADR-0004, **accepted** by the owner on 2026-10-28 together with
+  the Phase 1 review.
 - **React Router data mode, not framework mode.** Framework mode is a server-rendering framework
   in its own right (the Remix successor); using it would duplicate what Next.js already teaches.
   Data mode keeps the console a static SPA.
