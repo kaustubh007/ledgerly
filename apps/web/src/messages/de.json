@@ -1,0 +1,73 @@
+{
+  "meta": { "title": "Ledgerly", "description": "Rechnungen für kleine Teams" },
+  "a11y": { "skipToContent": "Zum Inhalt springen", "mainNavigation": "Hauptnavigation" },
+  "auth": {
+    "signInTitle": "Anmelden",
+    "signUpTitle": "Konto erstellen",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "name": "Ihr Name",
+    "organizationName": "Name der Organisation",
+    "signInSubmit": "Anmelden",
+    "signUpSubmit": "Konto erstellen",
+    "submitting": "Bitte warten…",
+    "noAccount": "Noch kein Konto?",
+    "haveAccount": "Sie haben bereits ein Konto?",
+    "goToSignUp": "Jetzt erstellen",
+    "goToSignIn": "Anmelden",
+    "restoring": "Sitzung wird wiederhergestellt…"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "E-Mail oder Passwort ist falsch.",
+    "EMAIL_TAKEN": "Für diese E-Mail-Adresse gibt es bereits ein Konto.",
+    "RATE_LIMITED": "Zu viele Versuche. Bitte später erneut versuchen.",
+    "INVALID_EMAIL": "Bitte eine gültige E-Mail-Adresse eingeben.",
+    "TOO_SMALL": "Das ist zu kurz.",
+    "TOO_BIG": "Das ist zu lang.",
+    "generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+  },
+  "shell": {
+    "organization": "Organisation",
+    "switchOrganization": "Organisation wechseln",
+    "currentOrganization": "aktuell",
+    "account": "Konto",
+    "signOut": "Abmelden",
+    "theme": "Design",
+    "themeSystem": "System",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "openNavigation": "Navigation öffnen",
+    "closeNavigation": "Navigation schließen",
+    "dismiss": "Schließen",
+    "notifications": "Benachrichtigungen"
+  },
+  "nav": { "dashboard": "Übersicht", "customers": "Kunden" },
+  "roles": {
+    "OWNER": "Inhaber",
+    "ADMIN": "Admin",
+    "ACCOUNTANT": "Buchhaltung",
+    "VIEWER": "Lesezugriff"
+  },
+  "dashboard": {
+    "title": "Übersicht",
+    "outstanding": "Offen",
+    "overdue": "Überfällig",
+    "currency": "Währung",
+    "totalsCaption": "Offene Beträge nach Währung",
+    "empty": "Noch keine offenen Rechnungen.",
+    "invoiceCount": "{count, plural, =0 {Keine Rechnungen} one {# Rechnung} other {# Rechnungen}}"
+  },
+  "customers": {
+    "title": "Kunden",
+    "name": "Name",
+    "email": "E-Mail",
+    "currency": "Währung",
+    "empty": "Noch keine Kunden.",
+    "loadMore": "Mehr laden"
+  },
+  "orgPicker": {
+    "title": "Ihre Organisationen",
+    "none": "Sie sind noch in keiner Organisation Mitglied."
+  },
+  "notFound": { "title": "Seite nicht gefunden", "back": "Zu Ihren Organisationen" }
+}

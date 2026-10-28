@@ -14,6 +14,8 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - `make up-aws` — adds LocalStack (needs `LOCALSTACK_AUTH_TOKEN`)
 - `make env` / `make api` / `make smoke-api` — dev keys, run the API, prove tracing end to end
 - `pnpm --filter @ledgerly/api codegen` — regenerate resolver types after a schema change
+- `pnpm --filter @ledgerly/web codegen` — regenerate typed documents after changing a query
+- `make web` / `make e2e` — run the Next.js app; Playwright against a fresh e2e database
 
 ## Non-negotiable rules
 
@@ -32,6 +34,9 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - Every tenant schema declares `orgId: tenantOrgId` and uses `tenantGuard`. Every new Query or
   Mutation field must be covered by `apps/api/test/tenant-leak.test.ts` (the suite enforces it).
 - Mongoose query chains end in `.exec()`; raw driver access only in `apps/api/src/data/`.
+- Web: client components never fetch during SSR; first-render data comes from Server Components
+  (`query`, or `<PreloadQuery>` + `useReadQuery`). Switching organisation is a full page load.
+- Web: the Redux store is created per request (`StoreProvider`), never at module level.
 - Never commit a red build. Never leave a TODO in a completed phase.
 
 ## Style

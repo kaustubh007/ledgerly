@@ -7,8 +7,11 @@ packages:
 strictPeerDependencies: true
 engineStrict: true
 # pnpm 12 blocks dependency install scripts unless listed. None of these is needed: two print
-# protobuf notices, two are optional native SSH helpers that Testcontainers can do without.
+# protobuf notices, two are optional native SSH helpers that Testcontainers can do without,
+# @parcel/watcher only serves `sass --watch`, and @swc/core is an optional codegen transpiler.
 allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': false
   '@apollo/protobufjs': false
   cpu-features: false
   protobufjs: false

@@ -8,3 +8,9 @@ docs/adr
 
 # Generated; checked for freshness by `codegen:check`, so it must stay byte-for-byte as generated.
 **/__generated__
+
+# Next.js and Playwright output
+.next
+next-env.d.ts
+playwright-report
+test-results

@@ -2,6 +2,79 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Phase 3 (2026-10-28)
+
+- **Linting without `eslint-config-next`.** It depends on `eslint-plugin-jsx-a11y`,
+  `eslint-plugin-react` and `eslint-plugin-import`, whose peer ranges stop at ESLint 9 (jsx-a11y
+  has not released since 2024). With `strictPeerDependencies` that fails the install. The web app
+  assembles the same rules from ESLint-10-compatible plugins: `@next/eslint-plugin-next`
+  (core-web-vitals), `eslint-plugin-react-hooks` 7, and `eslint-plugin-jsx-a11y-x` (the maintained
+  fork, `strict` preset). Downgrading the web app to ESLint 9 was the alternative.
+- **pnpm minimum release age is respected, not bypassed.** pnpm auto-added
+  `minimumReleaseAgeExclude` entries for `@hookform/resolvers@6.0.2` and `sass@1.107.0`
+  (published the same day). Removed; pinned 6.0.0 and 1.106.1 instead.
+- **Dependency build scripts:** `@parcel/watcher` (only for `sass --watch`) and `@swc/core`
+  (optional codegen transpiler) are denied. `@apollo/client`'s bundled "agent skills" are not
+  approved: no reason to let a dependency add instructions to an agent.
+- **Playwright pinned to 1.63.0**, the version whose Chromium the dev container ships. CI installs
+  the matching browser. Renovate bumps it like anything else.
+- **Locale from `next/root-params`** (Next 16), as next-intl 4.14 recommends; `setRequestLocale`
+  and `requestLocale` are deprecated. `next typegen` runs before `tsc` to generate its types.
+- **Routes:** `/[locale]/(auth)/sign-in|sign-up`, `/[locale]/o` (picks the first organisation),
+  `/[locale]/o/[orgSlug]/…` (the app). Unknown paths render a localised 404.
+- **`proxy.ts` only negotiates the locale.** It cannot decide authentication: the refresh cookie
+  is scoped to `/graphql/auth` (ADR-0005) and never reaches page requests, so "access token
+  expired" and "signed out" look the same there. The org layout decides instead, and renders
+  `RestoreSession` (a client component that refreshes once and re-renders) when the server sees
+  no user. A per-path guard stops a refresh loop.
+- **Server Components call the API directly** (`API_INTERNAL_URL`) forwarding only the
+  `__Host-at` cookie; the browser calls `/graphql` on its own origin through a Next rewrite in
+  dev (CloudFront in prod, ADR-0001). Rewrites are resolved at build time, so `API_INTERNAL_URL`
+  is a build input (declared in `turbo.json`).
+- **Client components never fetch during SSR.** The SSR Apollo client is a link that throws with
+  an explanation; authenticated data for the first render comes from Server Components (`query`)
+  or `<PreloadQuery>` with a `queryRef` render-prop read by `useReadQuery`. The plain-children
+  form of `PreloadQuery` only fills the _browser_ cache and was caught by that guard.
+- **Pages tolerate their layout's verdict.** Layouts and pages render in parallel; when the layout
+  shows `RestoreSession` or a 404, page queries use `errorPolicy: 'all'` so their (discarded)
+  failure is not logged as a crash.
+- **Switching organisation is a full page load** (plain `<a>`, not client navigation). Apollo's
+  cache is not keyed by organisation (the org travels in the `x-org` header), so a client-side
+  switch could briefly show the previous org's cached data. Org switches are rare; a reload is
+  cheap and cannot leak.
+- **Session refresh coordination:** per tab, one in-flight promise; across tabs, a Web Lock
+  serialises refreshes and a BroadcastChannel announces them (and sign-outs), so N tabs make one
+  network call. The plan mentioned only BroadcastChannel; without the lock, two tabs could still
+  both call the server. Found by a unit test: "already refreshed by another tab" must compare
+  timestamps strictly, or a refresh starting in the same millisecond is skipped.
+- **Sign-out signs out every tab** (BroadcastChannel), and still signs this browser out when the
+  logout request fails (found by a unit test: the error escaped as an unhandled rejection).
+- **Redux store per request, in two places:** the `(auth)` layout and the org layout each mount a
+  `StoreProvider` (`useState` initialiser → one store per request on the server, per page load in
+  the browser). The org layout preloads the session view and the theme; nothing else needs Redux
+  yet. Slices: `ui`, `toasts`, `session`. Middleware: a listener that persists the theme to a
+  readable `ledgerly-theme` cookie and applies it; a custom analytics middleware forwarding a
+  small allowlist of action _types_ (no payloads) to a sink. There is no analytics backend in
+  scope: the sink logs in development and discards otherwise.
+- **Theme is server-rendered** from the cookie (`data-theme` on `<html>`), so there is no flash.
+- **Translations:** en, de and ar message files from day one, with a test for identical keys and
+  for ICU plurals in each locale (Arabic has six plural categories). The German and Arabic texts
+  were written by Claude and need a native-speaker review before release.
+- **axe in unit tests uses `axe-core` directly** instead of `vitest-axe` (unmaintained since
+  2022): a ten-line helper with colour contrast disabled, because jsdom has no layout. Playwright
+  runs full axe, contrast included, on real pages.
+- **Import alias is `@web/*`, not `@/*`,** so each app's alias is unambiguous in the monorepo and
+  dependency-cruiser can resolve it (`tsconfig.depcruise.json`).
+- **E2E runs on its own database** (`ledgerly_e2e`, dropped before each run) and always starts its
+  own API and web server. Found when the sign-up rate limit (20/h per IP) correctly started
+  refusing accumulated local runs.
+- **Web server tracing:** `instrumentation.ts` starts the OTel Node SDK with the undici
+  instrumentation, so the server's fetches to the API carry `traceparent`: Jaeger shows traces
+  spanning `ledgerly-web` and `ledgerly-api`.
+- **Not done in Phase 3:** CSP nonces and security headers (Phase 8), the full SCSS token system
+  and dark-mode polish (Phase 7), forms beyond sign-in/up and any mutation UI (Phase 4), a
+  sessions/settings page, the React Compiler (Phase 6). Browser-side OTel spans are not set up.
+
 ## Phase 2 (2026-10-28)
 
 - **Refresh cookie is `__Secure-rt` on `/graphql/auth`** (ADR-0005). ADR-0003's `__Host-rt` with

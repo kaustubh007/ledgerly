@@ -1,0 +1,65 @@
+{
+  "meta": { "title": "Ledgerly", "description": "الفوترة للفرق الصغيرة" },
+  "a11y": { "skipToContent": "انتقل إلى المحتوى", "mainNavigation": "التنقل الرئيسي" },
+  "auth": {
+    "signInTitle": "تسجيل الدخول",
+    "signUpTitle": "إنشاء حسابك",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "اسمك",
+    "organizationName": "اسم المؤسسة",
+    "signInSubmit": "تسجيل الدخول",
+    "signUpSubmit": "إنشاء حساب",
+    "submitting": "يرجى الانتظار…",
+    "noAccount": "ليس لديك حساب؟",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "goToSignUp": "أنشئ حسابًا",
+    "goToSignIn": "تسجيل الدخول",
+    "restoring": "جارٍ استعادة جلستك…"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "EMAIL_TAKEN": "يوجد حساب بهذا البريد الإلكتروني بالفعل.",
+    "RATE_LIMITED": "محاولات كثيرة جدًا. حاول لاحقًا.",
+    "INVALID_EMAIL": "أدخل بريدًا إلكترونيًا صالحًا.",
+    "TOO_SMALL": "هذا قصير جدًا.",
+    "TOO_BIG": "هذا طويل جدًا.",
+    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+  },
+  "shell": {
+    "organization": "المؤسسة",
+    "switchOrganization": "تبديل المؤسسة",
+    "currentOrganization": "الحالية",
+    "account": "الحساب",
+    "signOut": "تسجيل الخروج",
+    "theme": "المظهر",
+    "themeSystem": "النظام",
+    "themeLight": "فاتح",
+    "themeDark": "داكن",
+    "openNavigation": "فتح التنقل",
+    "closeNavigation": "إغلاق التنقل",
+    "dismiss": "إغلاق",
+    "notifications": "الإشعارات"
+  },
+  "nav": { "dashboard": "لوحة المعلومات", "customers": "العملاء" },
+  "roles": { "OWNER": "المالك", "ADMIN": "مسؤول", "ACCOUNTANT": "محاسب", "VIEWER": "مشاهد" },
+  "dashboard": {
+    "title": "لوحة المعلومات",
+    "outstanding": "المستحق",
+    "overdue": "المتأخر",
+    "currency": "العملة",
+    "totalsCaption": "الأرصدة المفتوحة حسب العملة",
+    "empty": "لا توجد فواتير مفتوحة بعد.",
+    "invoiceCount": "{count, plural, =0 {لا فواتير} one {فاتورة واحدة} two {فاتورتان} few {# فواتير} many {# فاتورة} other {# فاتورة}}"
+  },
+  "customers": {
+    "title": "العملاء",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "currency": "العملة",
+    "empty": "لا يوجد عملاء بعد.",
+    "loadMore": "تحميل المزيد"
+  },
+  "orgPicker": { "title": "مؤسساتك", "none": "لست عضوًا في أي مؤسسة بعد." },
+  "notFound": { "title": "الصفحة غير موجودة", "back": "انتقل إلى مؤسساتك" }
+}
