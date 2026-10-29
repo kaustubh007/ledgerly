@@ -4,6 +4,20 @@ Decisions the plan did not specify, or that were made in review. Newest first wi
 
 ## Phase 4 (2026-10-29)
 
+### Code scanning (after Phase 4)
+
+- **Per-IP request rate limit (CodeQL `js/missing-rate-limiting`).** Every request is
+  authenticated (JWT check plus a session read) before any resolver runs, and nothing bounded
+  that per client. `express-rate-limit` now runs first, before cookie parsing:
+  `REQUESTS_PER_MINUTE_PER_IP` (default 1,000), keyed by `req.ip` (so `TRUST_PROXY_HOPS` must be
+  right), 429 `RATE_LIMITED` with standard `RateLimit`/`Retry-After` headers. `/healthz` is
+  exempt. Counters are in memory, per API task: it is a flood guard, not a quota. The sign-in,
+  sign-up and password-reset limits stay as they were (Mongo-backed, shared by all tasks).
+- **Known gap, for Phase 8:** server-rendered pages call the API from the web server, so in
+  production they all share the web task's IP and its budget. Before deploying, either the web
+  server forwards the client IP over a trusted hop, or the per-IP limit moves to the WAF and
+  the in-app one keys server-to-server calls differently.
+
 ### Plans and limits
 
 - **Plan numbers.** FREE: 5 customers, 10 invoices a month, 2 seats, no features. PRO (USD 29 a

@@ -15,6 +15,7 @@ import { createErrorFormatter } from '../graphql/errors.ts';
 import { maxAliasesRule, maxDepthRule } from '../graphql/limits.ts';
 import { buildTenantSchema } from '../graphql/schema.ts';
 import { authRoutes } from './auth-routes.ts';
+import { requestRateLimit } from './rate-limit.ts';
 
 export const ORG_HEADER = 'x-org';
 
@@ -90,7 +91,14 @@ export async function createApp(deps: Deps): Promise<App> {
     res.status(up ? 200 : 503).json({ status: up ? 'ok' : 'unavailable' });
   });
 
-  app.use(cookieParser(), express.json({ limit: '100kb' }), requestContext(deps), requestLog(deps));
+  // Rate limiting comes first: authenticating a request already costs a database read.
+  app.use(
+    requestRateLimit(deps),
+    cookieParser(),
+    express.json({ limit: '100kb' }),
+    requestContext(deps),
+    requestLog(deps),
+  );
   app.use('/graphql/auth', authRoutes(deps));
   app.use(
     '/graphql',

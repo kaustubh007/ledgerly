@@ -35,7 +35,7 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
-export async function startTestApp(): Promise<TestApp> {
+export async function startTestApp(env: Record<string, string> = {}): Promise<TestApp> {
   const { privateKey, publicKey } = await generateKeyPair('EdDSA', { extractable: true });
   const config = loadConfig({
     NODE_ENV: 'test',
@@ -46,6 +46,7 @@ export async function startTestApp(): Promise<TestApp> {
     REFRESH_GRACE_KEY: randomBytes(32).toString('base64url'),
     // One trusted hop, so tests can choose the client IP with X-Forwarded-For.
     TRUST_PROXY_HOPS: '1',
+    ...env,
   });
   const clock = new TestClock();
   const deps: Deps = {

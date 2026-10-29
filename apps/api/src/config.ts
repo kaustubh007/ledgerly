@@ -14,6 +14,8 @@ const Config = z.object({
   PUBLIC_ORIGIN: z.url().default('http://localhost:3000'),
   /** Reverse proxies in front of the API (prod: CloudFront + ALB = 2). Decides `req.ip`. */
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+  /** Per-IP request budget per minute, per API task (http/rate-limit.ts). */
+  REQUESTS_PER_MINUTE_PER_IP: z.coerce.number().int().positive().default(1000),
 });
 
 export type Config = z.infer<typeof Config>;
