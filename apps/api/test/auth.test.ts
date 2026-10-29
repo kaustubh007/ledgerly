@@ -189,6 +189,40 @@ describe('access and refresh tokens', () => {
     expect((await stranger.refresh()).status).toBe(401);
     expect((await app.client().refresh()).status).toBe(401);
   });
+
+  // The CSRF defence of /graphql/auth is SameSite plus the custom header (PLAN §3.3), not a
+  // token, so CodeQL's js/missing-token-validation cannot see it and was dismissed. This test
+  // is the evidence: a cross-site form post, cookies included, changes nothing.
+  it('ignores a cross-site form post to logout or refresh, even if the cookies ride along', async () => {
+    const { client } = await signUpUser(app);
+    const refreshToken = client.cookies.get(REFRESH_COOKIE)?.value;
+    const forged = {
+      'content-type': 'application/x-www-form-urlencoded',
+      origin: 'https://evil.example',
+    };
+    for (const path of ['/graphql/auth/logout', '/graphql/auth/refresh']) {
+      const res = await client.request(path, { method: 'POST', headers: forged, body: 'a=1' });
+      expect(res.status, path).toBe(400);
+      expect(res.headers.getSetCookie(), path).toEqual([]);
+    }
+    expect((await client.request('/graphql/auth/logout')).status).toBe(400); // GET: refused too
+    // Still signed in, with the same refresh token: nothing was revoked or rotated.
+    expect((await client.gql<any>(VIEWER)).data?.viewer).not.toBeNull();
+    expect(client.cookies.get(REFRESH_COOKIE)?.value).toBe(refreshToken);
+  });
+
+  it('sets session cookies a cross-site request cannot carry', async () => {
+    const { client } = await signUpUser(app);
+    const cookies = (await client.refresh()).headers.getSetCookie();
+    const attributes = (name: string) =>
+      (cookies.find((c) => c.startsWith(`${name}=`)) ?? '').toLowerCase();
+    expect(attributes(ACCESS_COOKIE)).toMatch(/samesite=lax/);
+    expect(attributes(REFRESH_COOKIE)).toMatch(/samesite=strict/);
+    for (const name of [ACCESS_COOKIE, REFRESH_COOKIE]) {
+      expect(attributes(name), name).toMatch(/httponly/);
+      expect(attributes(name), name).toMatch(/secure/);
+    }
+  });
 });
 
 describe('sessions', () => {

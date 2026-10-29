@@ -13,6 +13,16 @@ Decisions the plan did not specify, or that were made in review. Newest first wi
   right), 429 `RATE_LIMITED` with standard `RateLimit`/`Retry-After` headers. `/healthz` is
   exempt. Counters are in memory, per API task: it is a flood guard, not a quota. The sign-in,
   sign-up and password-reset limits stay as they were (Mongo-backed, shared by all tasks).
+- **CSRF alert dismissed as a false positive (CodeQL `js/missing-token-validation`, owner's
+  decision).** It flags `POST /graphql/auth/refresh` and `/logout` because the query recognises
+  only CSRF libraries (`csurf`, `lusca`) or a double-submit cookie. The defence here is the one
+  PLAN §3.3 chose: `SameSite=Strict` (refresh) and `Lax` (access) cookies, POST only, and a
+  required `x-ledgerly-csrf` header that a cross-site form cannot send and a cross-site fetch
+  cannot send without a CORS approval the API never gives. `/graphql` itself is covered by Apollo's
+  `csrfPrevention`. Adding a double-submit token only to satisfy the scanner was rejected (review
+  finding 8). The evidence is two tests in `test/auth.test.ts`: a forged form post with cookies
+  attached changes nothing, and the cookie attributes are as stated. Removing the header check
+  fails the first. If the cookies or the header check ever change, revisit this dismissal.
 - **Known gap, for Phase 8:** server-rendered pages call the API from the web server, so in
   production they all share the web task's IP and its budget. Before deploying, either the web
   server forwards the client IP over a trusted hop, or the per-IP limit moves to the WAF and
