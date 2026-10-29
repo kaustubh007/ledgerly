@@ -18,13 +18,14 @@ Written as of the end of Phase 4. When the code and this page disagree, the code
 4. [The API](#4-the-api-appsapi)
 5. [The web app](#5-the-web-app-appsweb)
 6. [One request, end to end](#6-one-request-end-to-end)
-7. [Doing things exactly once](#7-doing-things-exactly-once)
-8. [The rules and why](#8-the-rules-and-why)
-9. [How we test](#9-how-we-test)
-10. [Adding a feature](#10-adding-a-feature)
-11. [Your first week](#11-your-first-week)
-12. [Known gaps](#12-known-gaps)
-13. [Glossary](#13-glossary)
+7. [Dry run, module by module](#7-dry-run-module-by-module)
+8. [Doing things exactly once](#8-doing-things-exactly-once)
+9. [The rules and why](#9-the-rules-and-why)
+10. [How we test](#10-how-we-test)
+11. [Adding a feature](#11-adding-a-feature)
+12. [Your first week](#12-your-first-week)
+13. [Known gaps](#13-known-gaps)
+14. [Glossary](#14-glossary)
 
 ## 1. What Ledgerly is
 
@@ -256,9 +257,291 @@ Follow a card payment on an invoice. Open each file as you read its step.
    `CARD_DECLINED` is translated and shown next to the card field.
 
 Every step appears in one trace in Jaeger (<http://localhost:16686>), down to each MongoDB
-command, and every log line carries the same `traceId`.
+command, and every log line carries the same `traceId`. For the same journey traced module by
+module, with real values and every branch, see [section 7](#7-dry-run-module-by-module).
 
-## 7. Doing things exactly once
+## 7. Dry run, module by module
+
+Section 6 is the overview. This is the same card payment traced one module at a time, with real
+values, so you can follow it in a debugger. For each module: what comes **in**, what it
+**does**, and what goes **out**.
+
+### The scenario
+
+| Thing      | Value                                                                              |
+| ---------- | ---------------------------------------------------------------------------------- |
+| User       | Priya, role `ACCOUNTANT` in the organisation with slug `acme`                      |
+| Page       | `/en/o/acme/invoices/665f…a1`                                                      |
+| Invoice #7 | USD, total 150.00, already paid 50.00, status `PARTIALLY_PAID`, balance **100.00** |
+| Stored as  | `totalMinor: 15000n`, `paidMinor: 5000n` (cents, as `bigint`)                      |
+| Action     | Pay **100.00** by card with the test card `pm_card_visa`                           |
+| Form's key | `k = "3f2c…"`, a UUID made by `useIdempotencyKey` when the form mounted            |
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant F as CardPaymentForm<br/>(usePaymentAction)
+  participant L as Apollo links
+  participant X as Express middleware
+  participant R as Resolver
+  participant S as invoices.service
+  participant D as domain
+  participant G as PaymentGatewaySimulator
+  participant M as MongoDB
+  F->>F: zod check, addOptimistic (pending row)
+  F->>L: pay({ key, input })
+  L->>X: POST /graphql + x-org: acme + __Host-at cookie
+  X->>M: Session.exists, Organization + Membership
+  X->>R: request context { user, tenant }
+  R->>S: payInvoiceByCard(deps, caller, input, key)
+  S->>M: storedOutcome(key): none
+  S->>M: Invoice.findById (orgId added by guard)
+  S->>D: recordPayment(invoice, 100.00): ok (dry check)
+  S->>G: charge(10000n USD, pm_card_visa, gatewayKey)
+  G-->>S: approved, ch_sim_…
+  S->>M: transaction: re-read, re-check, Payment.create,<br/>Invoice.updateOne, IdempotencyKey.create
+  S-->>R: { ok: true, id }
+  R->>M: Invoice.findById + DataLoaders
+  R-->>F: invoice { status: PAID, balance 0.00 }, userErrors []
+  F->>F: cache updates, renew key, toast, pending row replaced
+```
+
+### Stage A: the browser, before any network call
+
+**A1. The form submits.** `apps/web/src/features/invoices/PaymentForms.tsx`, `CardPaymentForm`
+
+- **In:** a `FormData` with `amount = "100.00"` (the default is the balance) and
+  `paymentMethod = "pm_card_visa"`.
+- **Does:** `<form action={action}>` hands the `FormData` to the action from `useActionState`.
+  React runs it inside a transition, sets `pending = true` (the button now reads "Charging…" and
+  is disabled), and queues any further submit rather than running two at once.
+- **Out:** a call to the shared `usePaymentAction` action.
+
+**A2. Validate and show it early.** `usePaymentAction` in the same file
+
+- **In:** `formText(formData, 'amount')` → `"100.00"`.
+- **Does:**
+  - `parseInput(MoneyInput, { amount: "100.00", currency: "USD" })` runs the same zod rule the API
+    will run. If it fails, the action returns `{ errors }` here and nothing is sent.
+  - `props.addOptimistic("100.00", "CARD")` calls the reducer from `useOptimistic` in
+    `InvoiceDetail.tsx`. The payments table immediately shows a row reading "Recording…" with
+    `aria-busy`.
+- **Out:** `send("100.00", formData, k)`.
+
+**A3. Build the mutation.** `CardPaymentForm`'s `send`
+
+- **In:** the amount, the form data, and `k`.
+- **Does:** calls Apollo's `pay()` (from `useMutation(PayInvoiceByCardMutation)`) with:
+
+  ```json
+  {
+    "key": "3f2c…",
+    "input": {
+      "invoiceId": "665f…a1",
+      "paymentMethod": "pm_card_visa",
+      "amount": { "amount": "100.00", "currency": "USD" }
+    }
+  }
+  ```
+
+  The document asks for the whole invoice back (`...InvoiceDetailFields`) plus `userErrors`.
+
+- **Out:** an operation entering the Apollo link chain.
+
+**A4. Through the links.** `lib/apollo/ApolloWrapper.tsx` builds the chain; `lib/apollo/links.ts`
+
+| Link                           | On the way out                                                                                                                          | On the way back                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `refreshOnUnauthenticatedLink` | Passes it on unchanged.                                                                                                                 | Only acts on `UNAUTHENTICATED` (see branch B5 below). Here: nothing to do. |
+| `orgHeaderLink`                | `orgSlugFromPath("/en/o/acme/invoices/665f…a1")` → `"acme"`; sets header `x-org: acme`. The URL decides the organisation, nothing else. | –                                                                          |
+| `HttpLink`                     | `POST /graphql`, `content-type: application/json`, `credentials: 'same-origin'`.                                                        | Hands the JSON response back up the chain.                                 |
+
+The browser adds cookies itself. It sends `__Host-at` (path `/`) but **not** `__Secure-rt`, whose
+path is `/graphql/auth`. The refresh token never travels with ordinary requests.
+
+**A5. Same origin to the API.** Locally, the rewrite in `apps/web/next.config.ts` forwards
+`/graphql` to `http://localhost:4000/graphql`; in production CloudFront does the same
+(ADR-0001). As far as the browser knows, it never left the page's origin, which is why there is
+no CORS anywhere.
+
+### Stage B: the API's HTTP layer
+
+`apps/api/src/http/app.ts` mounts the middleware in this order. Every request passes through all
+of it before any GraphQL code runs.
+
+| #   | Middleware                           | In → Does → Out (for our request)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | `requestRateLimit` (`rate-limit.ts`) | Counts one request for `req.ip` in this minute's window. Under `REQUESTS_PER_MINUTE_PER_IP` (default 1,000), so `next()`. Over it, the request ends here with 429 `RATE_LIMITED`.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| B2  | `cookieParser()`                     | `cookie` header → `req.cookies["__Host-at"] = "eyJhbGciOiJFZERTQSJ9…"`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| B3  | `express.json({ limit: '100kb' })`   | Body → `req.body = { query, variables, operationName }`. Bigger bodies are refused.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| B4  | `requestContext(deps)`               | **Who is this?** `authenticate()` → `verifyAccessToken()` checks the EdDSA signature, issuer, audience and expiry, and returns `{ userId, sessionId }`; then `Session.exists({ _id, userId, revokedAt: null, expiresAt: { $gt: now } })` makes revocation immediate. **Which organisation?** `resolveMembership(userId, "acme")` → `Organization.findOne({ slug })` and `Membership.findOne(...)` → `{ orgId, role: "ACCOUNTANT" }`. The role is read now, never from the token. **Out:** `runWithContext({ requestId, ip, userAgent, user, tenant }, next)`; everything below runs inside this `AsyncLocalStorage` context. |
+| B5  | `requestLog(deps)`                   | Notes the start time and registers a `finish` listener that will log one line: method, path, status, milliseconds. That line carries `requestId`, `userId`, `orgId` and `traceId` automatically.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| B6  | `/graphql/auth` router               | Not our path; skipped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| B7  | `expressMiddleware(apollo)`          | Apollo's `csrfPrevention` accepts the request (its content type is `application/json`, which a cross-site form cannot send). It parses and validates the document (depth ≤ 12, aliases ≤ 20) and builds the GraphQL context `{ deps, req, res, loaders: createLoaders() }`. Fresh DataLoaders for every request, so caches never cross requests.                                                                                                                                                                                                                                                                             |
+
+### Stage C: the resolver
+
+**C1.** `features/invoices/invoices.resolvers.ts`, `Mutation.payInvoiceByCard`
+
+- **In:** `{ input, idempotencyKey: "3f2c…" }` and the GraphQL context.
+- **Does:** `requireTenant('payments:record')` (in `graphql/context.ts`):
+  - `requireUser()`: is there a `user` in the request context? If not, it throws
+    `UNAUTHENTICATED`.
+  - Is there a `tenant`? If not, it throws `FORBIDDEN`.
+  - `can("ACCOUNTANT", "payments:record")` from `@ledgerly/domain` → `true`. A `VIEWER` would get
+    `FORBIDDEN` here.
+- **Out:** `caller = { userId, sessionId, orgId, role }`, then
+  `payInvoiceByCard(ctx.deps, caller, input, "3f2c…")`.
+
+Notice what the resolver does **not** do: no business logic and no database writes. It checks
+permission, delegates, and shapes the reply.
+
+### Stage D: the service, where the work happens
+
+`features/invoices/invoices.service.ts`, `payInvoiceByCard`. The order of these steps is the
+whole design; read the comment above the function.
+
+**D1. Has this exact request already been done?**
+`storedOutcome('payInvoiceByCard', k, userId, input)` in `features/idempotency/idempotency.ts`
+
+- `IdempotencyKey.findOne({ key: k })`. You didn't write `orgId`, but the **tenant guard**'s
+  `pre('findOne')` hook adds `{ orgId }` from the request context
+  (`data/tenant-guard.ts`). Keys are per organisation.
+- **Out:** `undefined`, because this is the first attempt. (A replay would return the stored
+  outcome here and skip everything below, including the charge.)
+
+**D2. Validate and load.**
+
+- `parseInput(CardPaymentInput, input)` → ok. This is the same zod schema as the browser's (A2),
+  but checked again, because the server never trusts the client.
+- `Invoice.findById("665f…a1")`. The guard adds `orgId` again, so an invoice from another
+  organisation is simply "not found", never "forbidden". That avoids confirming that it exists.
+- **Out:** `record = { status: "PARTIALLY_PAID", currency: "USD", totalMinor: 15000n, paidMinor: 5000n, number: 7, … }`.
+
+**D3. Would the domain allow it? (dry check, nothing written)**
+
+- `Money.parse("100.00", USD)` → `Money(10000n, USD)`. A string such as `"100.001"` would throw
+  here: USD has two decimal places.
+- `recordPayment(toDomain(record), payment)` from `packages/domain/src/invoice/invoice.ts`:
+  1. `guard`: does `PARTIALLY_PAID` allow `RECORD_PAYMENT`? Yes.
+  2. Same currency? USD = USD.
+  3. Positive? Yes.
+  4. `balance = 15000n − 5000n = 10000n`; is `10000n > 10000n`? No, so no `OVERPAYMENT`.
+  5. `paid = 5000n + 10000n = 15000n`, which equals the total, so the new status is `PAID`.
+- **Out:** `ok(...)`. The result is thrown away. It only answers "may we charge?". We never take
+  money for a payment we would refuse.
+
+**D4. Charge the card, outside any transaction.**
+
+- `gatewayKey("invoice-payment:<orgId>", k, invoiceId, "100.00", "pm_card_visa")` →
+  `"invoice-payment:<orgId>:3f2c…:Xy9…"`. That is our key plus a digest of what is being
+  charged.
+- `deps.paymentGateway.charge({ amount, paymentMethod, idempotencyKey, description: "Invoice 7" })`.
+  `deps.paymentGateway` is the `PaymentGateway` **port**; in this project it is
+  `PaymentGatewaySimulator` (`features/payments/payment-gateway.simulator.ts`):
+  - It looks up `SimulatedCharge` by the gateway key: none.
+  - `TEST_PAYMENT_METHODS["pm_card_visa"]` → `"approved"`.
+  - It stores the charge with a new `chargeId: "ch_sim_9b1e…"`. This is the "gateway's
+    database", so it is global and not tenant-guarded.
+- **Out:** `{ status: "approved", chargeId: "ch_sim_9b1e…" }`.
+
+Why outside the transaction? MongoDB may retry a transaction after a write conflict. A retried
+`charge()` inside it could charge the card twice.
+
+**D5. Record it, once, atomically.** `idempotent(...)` → `inTransaction(...)` → `recordPayment(input, userId, { chargeId })`
+
+All of the following happens in **one MongoDB transaction**. `inTransaction` is
+`mongoose.connection.transaction()`, and every model call inside it joins the transaction
+automatically.
+
+1. `IdempotencyKey.findOne({ key: k })` → none (checked again inside the transaction).
+2. `recordPayment` re-reads the invoice and re-runs the domain check. **This read is the one
+   that counts**: if someone else paid in the meantime, this check will see it.
+3. `Payment.create([{ invoiceId, amountMinor: 10000n, currency: "USD", method: "CARD", reference: "ch_sim_9b1e…", recordedBy: userId }])`.
+   The guard's `pre('validate')` sets `orgId`.
+4. `persist()` → `Invoice.updateOne({ _id }, { $set: { status: "PAID", paidMinor: 15000n, totalMinor: 15000n, lines: [...] } })`
+   (`fromDomain()` writes the domain invoice's fields back).
+5. `IdempotencyKey.create({ key: k, operation, requestHash, outcome: { ok: true, id } })`.
+6. Commit. Either all five writes are saved or none are.
+
+- **Out:** `{ ok: true, id: "665f…a1" }`.
+
+**D6. Compensate if needed.** The outcome is ok, so there's nothing to refund (see branch B4
+below for when there is).
+
+### Stage E: back out through GraphQL
+
+**E1.** `toPayload(outcome)` in the resolver: `Invoice.findById(id)` → the updated record →
+`{ invoice: record, userErrors: [] }`.
+
+**E2. Field resolvers** turn the database row into the GraphQL shape the query asked for. This is
+the **mapper** idea: resolvers receive the DB record and produce API types.
+
+| Field              | Resolver does                                             | Result                           |
+| ------------------ | --------------------------------------------------------- | -------------------------------- |
+| `Invoice.status`   | `inv.status`                                              | `"PAID"`                         |
+| `Invoice.total`    | `money(inv.totalMinor, inv.currency)`                     | `{ amount: "150.00" }`           |
+| `Invoice.balance`  | `balanceOf(inv)`                                          | `{ amount: "0.00" }`             |
+| `Invoice.customer` | `ctx.loaders.customer.load(...)`: batched, tenant-guarded | `{ id, name }`                   |
+| `Invoice.payments` | `ctx.loaders.paymentsByInvoice.load(...)`                 | two payments, the new one `CARD` |
+
+**E3.** No error happened, so `formatError` isn't involved. The response is HTTP 200 with
+`{ data: { payInvoiceByCard: { invoice: { … }, userErrors: [] } } }`, and B5's `finish` listener
+logs `POST /graphql 200`.
+
+### Stage F: the browser again
+
+**F1. Apollo's cache.** The response contains `Invoice:665f…a1` with its `id`. Apollo
+**normalises** it, overwriting the cached invoice that the page's `useReadQuery` is reading. No
+refetch is needed.
+
+**F2. `usePaymentAction` finishes.**
+
+- `errors = []`.
+- `renew()` creates a new UUID, so the _next_ payment is a new request.
+- A toast shows "Payment of $100.00 recorded.", formatted by `useMoney` in the UI locale.
+- It returns `{ errors: [] }`.
+
+**F3. React settles the transition.**
+
+- The `useOptimistic` "Recording…" row is dropped, and the real payments list from the cache
+  takes its place.
+- `InvoiceDetail` re-renders: the badge reads `PAID`, the balance reads $0.00.
+- `canPerform("PAID", "RECORD_PAYMENT")` is now `false`, so both payment forms disappear.
+- The forms are keyed by the balance (`key={card-${balance}}`), so if a balance remained they
+  would remount with the new balance as their default amount.
+
+**F4. Observability.** In Jaeger (<http://localhost:16686>) this whole request is one trace:
+the HTTP span, GraphQL parse/validate/execute, and every MongoDB command, including the
+transaction's `commitTransaction`.
+
+### Branches: what changes when things go differently
+
+| #   | What happens                                         | Where it turns                                                                                                                                                                                                                                                                                                                                                                                                                                                          | What the user sees                                                                                                               |
+| --- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| B1  | **Declined card** (`pm_card_declined`)               | D4: the simulator stores a declined charge and returns `{ status: "declined", reason: "card_declined" }`. The service returns `CARD_DECLINED` with field `["input", "paymentMethod"]` **before** D5, so nothing is written to our database and the key is not used up.                                                                                                                                                                                                  | The optimistic row disappears; the card dropdown shows "The card was declined." The key is kept for the retry.                   |
+| B2  | **Retry with another card** after B1, same key `k`   | D4: `gatewayKey` includes the payment method, so `pm_card_visa` gets a different gateway key. A new charge, not a conflict.                                                                                                                                                                                                                                                                                                                                             | Works as in the main path.                                                                                                       |
+| B3  | **Same request twice** (double click, network retry) | Sequential: D1 finds the stored outcome and returns it; no second charge. Truly concurrent: both reach D4 with the same gateway key, and the simulator returns the **same** charge; in D5 one transaction commits; the other conflicts with it (on the invoice document or the unique `(orgId, key)` index), runs again, and finds the stored outcome.                                                                                                                  | One payment, one charge.                                                                                                         |
+| B4  | **Someone else paid the balance** between D3 and D5  | D5 step 2: the re-check inside the transaction returns `OVERPAYMENT`. That refusal is stored for the key, then D6 calls `paymentGateway.refund(chargeId)` and adds `PAYMENT_REFUNDED`.                                                                                                                                                                                                                                                                                  | "The card was charged and immediately refunded." Tested in `billing.test.ts`: "refunds a charge that can no longer be recorded". |
+| B5  | **Access token expired** (it lives 10 minutes)       | B4 finds no valid token, so there's no `user`; C1 throws `UNAUTHENTICATED`. Back in the browser, `refreshOnUnauthenticatedLink` calls `refresher.refresh()` (`lib/auth/refresh.ts`): one refresh shared by every request, and by every tab via a Web Lock. That posts to `/graphql/auth/refresh` with the `x-ledgerly-csrf` header. Now the browser _does_ send `__Secure-rt`. The API rotates both cookies, and the link retries the mutation once, with the same key. | Nothing; it just takes a little longer. If the refresh is refused, the user is sent to sign-in.                                  |
+| B6  | **Overpayment typed in** (say 120.00)                | D3: the domain returns `OVERPAYMENT` before any charge.                                                                                                                                                                                                                                                                                                                                                                                                                 | The amount field shows the overpayment error; no money moved.                                                                    |
+| B7  | **A `VIEWER`**                                       | The UI hides the forms (`usePermission`). If someone calls the API anyway, C1 throws `FORBIDDEN`.                                                                                                                                                                                                                                                                                                                                                                       | No form to begin with.                                                                                                           |
+| B8  | **Too many requests from one IP**                    | B1 answers 429 before authentication even starts.                                                                                                                                                                                                                                                                                                                                                                                                                       | "Something went wrong. Please try again."                                                                                        |
+| B9  | **A bug throws** anywhere below the resolver         | `formatError` (`graphql/errors.ts`) logs the full error and returns "Something went wrong on our side." with the `traceId`.                                                                                                                                                                                                                                                                                                                                             | A generic error. Support can find the exact trace from the id.                                                                   |
+
+### Try it yourself
+
+- **Breakpoints:** run `make api` under your debugger and set breakpoints on `requestContext`,
+  `requireTenant`, `payInvoiceByCard` and `PaymentGatewaySimulator.charge`, then pay an invoice in
+  the browser. Watch `currentContext()` at each stop.
+- **The tests already script every branch:** read the card-payment tests in
+  `apps/api/test/billing.test.ts` with this section open, then run them with logs on:
+  `TEST_LOG_LEVEL=debug pnpm --filter @ledgerly/api exec vitest run test/billing.test.ts`.
+- **Thought experiment:** imagine the `charge()` call moved inside the `idempotent(...)` callback.
+  Walk through branch B3 again, remembering that MongoDB retries a transaction after a write
+  conflict, and explain to a teammate how a customer could now be charged twice.
+
+## 8. Doing things exactly once
 
 Most of the hard code in this repository exists to stop something happening twice, or not at
 all. Learn these five patterns and the rest reads easily.
@@ -291,7 +574,7 @@ counter incremented inside the send transaction, so a failed send uses no number
 written to an **outbox** collection in the same transaction as their cause, so a rolled-back
 change sends nothing.
 
-## 8. The rules and why
+## 9. The rules and why
 
 [`CLAUDE.md`](../CLAUDE.md) lists the rules that are never broken. Most are enforced by a tool,
 so you'll hear about a break in CI rather than in review.
@@ -316,7 +599,7 @@ When the plan doesn't say how to do something, the choice goes in
 [`docs/adr/`](adr/); accepted ADRs are never edited, only replaced by a new one (ADR-0005
 replaced part of ADR-0003 this way).
 
-## 9. How we test
+## 10. How we test
 
 | Tier           | Tests | What is real, what is not                                                                                 |
 | -------------- | ----: | --------------------------------------------------------------------------------------------------------- |
@@ -334,7 +617,7 @@ Four test files are worth reading before any feature code: `apps/api/test/tenant
 > the test fail, then put it back. A test you have never seen fail may not be testing anything.
 > The learning notes list each of these "mutation checks".
 
-## 10. Adding a feature
+## 11. Adding a feature
 
 Say you add "archive a customer". The order that keeps the build green:
 
@@ -354,7 +637,7 @@ Say you add "archive a customer". The order that keeps the build green:
 9. Component test with RTL and axe; an E2E step if it's part of a main journey.
 10. `pnpm check` green, then a `DECISIONS.md` line for anything the plan didn't specify.
 
-## 11. Your first week
+## 12. Your first week
 
 ```bash
 pnpm install
@@ -376,7 +659,7 @@ pnpm check       # everything CI runs
 - **Day 5:** do two exercises from the learning notes: remove `touchLock` and run the billing
   tests; set `REFRESH_GRACE_MS` to 0 and run the auth tests. Explain each failure to a teammate.
 
-## 12. Known gaps
+## 13. Known gaps
 
 Listed openly so nobody mistakes them for finished work:
 
@@ -388,7 +671,7 @@ Listed openly so nobody mistakes them for finished work:
 - German and Arabic text needs review by native speakers.
 - No AWS infrastructure exists yet; LocalStack is defined but unused.
 
-## 13. Glossary
+## 14. Glossary
 
 | Term               | Meaning                                                                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
