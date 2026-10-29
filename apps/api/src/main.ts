@@ -4,6 +4,7 @@ import { loadConfig } from './config.ts';
 import { connect, disconnect, syncIndexes } from './data/connection.ts';
 import type { Deps } from './deps.ts';
 import { importAccessTokenKeys } from './features/identity/tokens.ts';
+import { PaymentGatewaySimulator } from './features/payments/payment-gateway.simulator.ts';
 import { createApp } from './http/app.ts';
 import { createLogger } from './observability/logger.ts';
 import { onShutdown, runShutdownHooks } from './observability/shutdown.ts';
@@ -20,6 +21,8 @@ const deps: Deps = {
     config.ACCESS_TOKEN_PUBLIC_JWK,
   ),
   graceKey: Buffer.from(config.REFRESH_GRACE_KEY, 'base64url'),
+  // A deliberate simulation (README, "Simulations"): no real money moves in this project.
+  paymentGateway: new PaymentGatewaySimulator(systemClock),
 };
 
 await connect(config.MONGODB_URI);

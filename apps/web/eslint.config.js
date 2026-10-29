@@ -25,6 +25,8 @@ export default [
       ...nextPlugin.configs['core-web-vitals'].rules,
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.configs.strict.rules,
+      // `onClick={() => dispatch(x)}` is idiomatic React; the rule still applies to blocks.
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
     },
   },
   {

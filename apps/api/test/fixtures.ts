@@ -52,3 +52,22 @@ export async function sentInvoice(
   await user.client.ok(SEND, { id, key: randomUUID() });
   return id;
 }
+
+export const CHANGE_PLAN = `mutation ($input: ChangePlanInput!, $key: ID!) {
+  changePlan(input: $input, idempotencyKey: $key) {
+    organization { plan { code } }
+    userErrors { code field }
+  }
+}`;
+
+/** Upgrades through the real changePlan path, paying with the simulator's approving test card. */
+export async function upgrade(
+  user: SignedUp,
+  plan: 'PRO' | 'BUSINESS' = 'BUSINESS',
+): Promise<void> {
+  const r = await user.client.ok<any>(CHANGE_PLAN, {
+    key: randomUUID(),
+    input: { plan, paymentMethod: 'pm_card_visa' },
+  });
+  if (r.changePlan.userErrors.length) throw new Error(JSON.stringify(r.changePlan.userErrors));
+}

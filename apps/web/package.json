@@ -19,6 +19,7 @@
     "@apollo/client": "4.3.5",
     "@apollo/client-integration-nextjs": "0.14.5",
     "@hookform/resolvers": "6.0.0",
+    "@ledgerly/domain": "workspace:*",
     "@ledgerly/validation": "workspace:*",
     "@opentelemetry/api": "1.10.0",
     "@opentelemetry/exporter-trace-otlp-http": "0.300.0",

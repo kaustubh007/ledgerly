@@ -7,7 +7,7 @@ import type { MemberParent } from '../../features/organizations/member.types.ts'
 import type { InvitationRecord } from '../../features/organizations/invitation.model.ts';
 import type { CustomerRecord } from '../../features/customers/customer.model.ts';
 import type { InvoiceRecord } from '../../features/invoices/invoice.model.ts';
-import type { LineItem, Money as DomainMoney } from '@ledgerly/domain';
+import type { LineItem, Money as DomainMoney, Plan as DomainPlan } from '@ledgerly/domain';
 import type { PaymentRecord } from '../../features/invoices/payment.model.ts';
 import type { CurrencyTotalsParent } from '../../features/invoices/dashboard.types.ts';
 import type { GraphQLContext } from '../context.ts';
@@ -34,6 +34,28 @@ export type AuthPayload = {
   readonly __typename?: 'AuthPayload';
   readonly userErrors: ReadonlyArray<UserError>;
   readonly viewer: Maybe<Viewer>;
+};
+
+export type CardPaymentInput = {
+  readonly amount: MoneyInput;
+  readonly invoiceId: Scalars['ID']['input'];
+  /** A payment method token from the (simulated) gateway, e.g. `pm_card_visa`. */
+  readonly paymentMethod: Scalars['String']['input'];
+};
+
+export type ChangePlanInput = {
+  /**
+   * Required when the change costs money (an upgrade). The payment gateway is simulated; use
+   * `pm_card_visa` (approved) or `pm_card_declined` (declined). See README "Simulations".
+   */
+  readonly paymentMethod?: InputMaybe<Scalars['String']['input']>;
+  readonly plan: PlanCode;
+};
+
+export type ChangePlanPayload = {
+  readonly __typename?: 'ChangePlanPayload';
+  readonly organization: Maybe<Organization>;
+  readonly userErrors: ReadonlyArray<UserError>;
 };
 
 export type CreateInvoiceInput = {
@@ -216,12 +238,19 @@ export type Mutation = {
   /** Accepted by the signed-in user whose email matches the invitation. */
   readonly acceptInvitation: OrganizationPayload;
   readonly changeMemberRole: MemberPayload;
+  /** Requires `organization:manage` (OWNER). Upgrades are charged through the payment gateway. */
+  readonly changePlan: ChangePlanPayload;
   readonly createCustomer: CustomerPayload;
   readonly createInvoice: InvoicePayload;
   /** Creates another organisation with the viewer as OWNER. */
   readonly createOrganization: OrganizationPayload;
   readonly inviteMember: InvitationPayload;
   readonly logIn: AuthPayload;
+  /**
+   * Charges the card through the payment gateway, then records the payment. If the payment can no
+   * longer be recorded (another payment settled the balance meanwhile), the charge is refunded.
+   */
+  readonly payInvoiceByCard: InvoicePayload;
   readonly recordPayment: InvoicePayload;
   readonly removeMember: OkPayload;
   readonly replaceInvoiceLines: InvoicePayload;
@@ -252,6 +281,12 @@ export type MutationChangeMemberRoleArgs = {
 };
 
 
+export type MutationChangePlanArgs = {
+  idempotencyKey: Scalars['ID']['input'];
+  input: ChangePlanInput;
+};
+
+
 export type MutationCreateCustomerArgs = {
   input: CustomerInput;
 };
@@ -276,6 +311,12 @@ export type MutationInviteMemberArgs = {
 
 export type MutationLogInArgs = {
   input: LogInInput;
+};
+
+
+export type MutationPayInvoiceByCardArgs = {
+  idempotencyKey: Scalars['ID']['input'];
+  input: CardPaymentInput;
 };
 
 
@@ -352,9 +393,11 @@ export type Organization = {
   /** Requires `members:manage`. */
   readonly members: ReadonlyArray<Member>;
   readonly name: Scalars['String']['output'];
+  readonly plan: Plan;
   readonly slug: Scalars['String']['output'];
   /** IANA time zone; decides what 'overdue' means for this organisation. */
   readonly timeZone: Scalars['String']['output'];
+  readonly usage: Usage;
   readonly viewerRole: Role;
 };
 
@@ -381,7 +424,43 @@ export type Payment = {
   readonly __typename?: 'Payment';
   readonly amount: Money;
   readonly id: Scalars['ID']['output'];
+  readonly method: PaymentMethod;
   readonly recordedAt: Scalars['DateTime']['output'];
+  /** The gateway's charge id for card payments. */
+  readonly reference: Maybe<Scalars['String']['output']>;
+};
+
+export type PaymentMethod =
+  | 'CARD'
+  | 'MANUAL';
+
+export type Plan = {
+  readonly __typename?: 'Plan';
+  readonly code: PlanCode;
+  readonly features: PlanFeatures;
+  readonly limits: PlanLimits;
+  readonly monthlyPrice: Money;
+};
+
+export type PlanCode =
+  | 'BUSINESS'
+  | 'FREE'
+  | 'PRO';
+
+export type PlanFeatures = {
+  readonly __typename?: 'PlanFeatures';
+  readonly auditExport: Scalars['Boolean']['output'];
+  readonly customBranding: Scalars['Boolean']['output'];
+  readonly mfaEnforcement: Scalars['Boolean']['output'];
+};
+
+/** Null means unlimited. */
+export type PlanLimits = {
+  readonly __typename?: 'PlanLimits';
+  readonly customers: Maybe<Scalars['Int']['output']>;
+  readonly invoicesPerMonth: Maybe<Scalars['Int']['output']>;
+  /** Members plus open invitations. */
+  readonly seats: Maybe<Scalars['Int']['output']>;
 };
 
 export type Query = {
@@ -392,6 +471,8 @@ export type Query = {
   readonly invoice: Maybe<Invoice>;
   readonly invoices: InvoiceConnection;
   readonly organization: Maybe<Organization>;
+  /** The plan catalogue. Not tenant data. */
+  readonly plans: ReadonlyArray<Plan>;
   /** The signed-in user, or null. */
   readonly viewer: Maybe<Viewer>;
 };
@@ -416,6 +497,7 @@ export type QueryInvoiceArgs = {
 
 export type QueryInvoicesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  customerId?: InputMaybe<Scalars['ID']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   status?: InputMaybe<InvoiceStatus>;
 };
@@ -456,6 +538,14 @@ export type StatusCount = {
   readonly __typename?: 'StatusCount';
   readonly count: Scalars['Int']['output'];
   readonly status: InvoiceStatus;
+};
+
+export type Usage = {
+  readonly __typename?: 'Usage';
+  readonly customers: Scalars['Int']['output'];
+  /** Invoices created this calendar month (UTC). */
+  readonly invoicesThisMonth: Scalars['Int']['output'];
+  readonly seats: Scalars['Int']['output'];
 };
 
 /**
@@ -557,6 +647,9 @@ export type ResolversTypes = {
   AuthPayload: ResolverTypeWrapper<Omit<AuthPayload, 'viewer'> & { viewer?: Maybe<ResolversTypes['Viewer']> }>;
   BigInt: ResolverTypeWrapper<Scalars['BigInt']['output']>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
+  CardPaymentInput: CardPaymentInput;
+  ChangePlanInput: ChangePlanInput;
+  ChangePlanPayload: ResolverTypeWrapper<Omit<ChangePlanPayload, 'organization'> & { organization?: Maybe<ResolversTypes['Organization']> }>;
   CreateInvoiceInput: CreateInvoiceInput;
   CurrencyTotals: ResolverTypeWrapper<CurrencyTotalsParent>;
   Customer: ResolverTypeWrapper<CustomerRecord>;
@@ -591,6 +684,11 @@ export type ResolversTypes = {
   OrganizationSummary: ResolverTypeWrapper<OrganizationRecord>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   Payment: ResolverTypeWrapper<PaymentRecord>;
+  PaymentMethod: PaymentMethod;
+  Plan: ResolverTypeWrapper<DomainPlan>;
+  PlanCode: PlanCode;
+  PlanFeatures: ResolverTypeWrapper<PlanFeatures>;
+  PlanLimits: ResolverTypeWrapper<PlanLimits>;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
   RecordPaymentInput: RecordPaymentInput;
   ResetPasswordInput: ResetPasswordInput;
@@ -599,6 +697,7 @@ export type ResolversTypes = {
   SignUpInput: SignUpInput;
   StatusCount: ResolverTypeWrapper<StatusCount>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
+  Usage: ResolverTypeWrapper<Usage>;
   UserError: ResolverTypeWrapper<UserError>;
   Viewer: ResolverTypeWrapper<UserRecord>;
 };
@@ -608,6 +707,9 @@ export type ResolversParentTypes = {
   AuthPayload: Omit<AuthPayload, 'viewer'> & { viewer?: Maybe<ResolversParentTypes['Viewer']> };
   BigInt: Scalars['BigInt']['output'];
   Boolean: Scalars['Boolean']['output'];
+  CardPaymentInput: CardPaymentInput;
+  ChangePlanInput: ChangePlanInput;
+  ChangePlanPayload: Omit<ChangePlanPayload, 'organization'> & { organization?: Maybe<ResolversParentTypes['Organization']> };
   CreateInvoiceInput: CreateInvoiceInput;
   CurrencyTotals: CurrencyTotalsParent;
   Customer: CustomerRecord;
@@ -641,6 +743,9 @@ export type ResolversParentTypes = {
   OrganizationSummary: OrganizationRecord;
   PageInfo: PageInfo;
   Payment: PaymentRecord;
+  Plan: DomainPlan;
+  PlanFeatures: PlanFeatures;
+  PlanLimits: PlanLimits;
   Query: Record<PropertyKey, never>;
   RecordPaymentInput: RecordPaymentInput;
   ResetPasswordInput: ResetPasswordInput;
@@ -648,6 +753,7 @@ export type ResolversParentTypes = {
   SignUpInput: SignUpInput;
   StatusCount: StatusCount;
   String: Scalars['String']['output'];
+  Usage: Usage;
   UserError: UserError;
   Viewer: UserRecord;
 };
@@ -660,6 +766,11 @@ export type AuthPayloadResolvers<ContextType = GraphQLContext, ParentType extend
 export interface BigIntScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['BigInt'], any> {
   name: 'BigInt';
 }
+
+export type ChangePlanPayloadResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ChangePlanPayload'] = ResolversParentTypes['ChangePlanPayload']> = {
+  organization?: Resolver<Maybe<ResolversTypes['Organization']>, ParentType, ContextType>;
+  userErrors?: Resolver<ReadonlyArray<ResolversTypes['UserError']>, ParentType, ContextType>;
+};
 
 export type CurrencyTotalsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CurrencyTotals'] = ResolversParentTypes['CurrencyTotals']> = {
   currency?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -783,11 +894,13 @@ export type MoneyResolvers<ContextType = GraphQLContext, ParentType extends Reso
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   acceptInvitation?: Resolver<ResolversTypes['OrganizationPayload'], ParentType, ContextType, RequireFields<MutationAcceptInvitationArgs, 'token'>>;
   changeMemberRole?: Resolver<ResolversTypes['MemberPayload'], ParentType, ContextType, RequireFields<MutationChangeMemberRoleArgs, 'role' | 'userId'>>;
+  changePlan?: Resolver<ResolversTypes['ChangePlanPayload'], ParentType, ContextType, RequireFields<MutationChangePlanArgs, 'idempotencyKey' | 'input'>>;
   createCustomer?: Resolver<ResolversTypes['CustomerPayload'], ParentType, ContextType, RequireFields<MutationCreateCustomerArgs, 'input'>>;
   createInvoice?: Resolver<ResolversTypes['InvoicePayload'], ParentType, ContextType, RequireFields<MutationCreateInvoiceArgs, 'idempotencyKey' | 'input'>>;
   createOrganization?: Resolver<ResolversTypes['OrganizationPayload'], ParentType, ContextType, RequireFields<MutationCreateOrganizationArgs, 'name'>>;
   inviteMember?: Resolver<ResolversTypes['InvitationPayload'], ParentType, ContextType, RequireFields<MutationInviteMemberArgs, 'email' | 'role'>>;
   logIn?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType, RequireFields<MutationLogInArgs, 'input'>>;
+  payInvoiceByCard?: Resolver<ResolversTypes['InvoicePayload'], ParentType, ContextType, RequireFields<MutationPayInvoiceByCardArgs, 'idempotencyKey' | 'input'>>;
   recordPayment?: Resolver<ResolversTypes['InvoicePayload'], ParentType, ContextType, RequireFields<MutationRecordPaymentArgs, 'idempotencyKey' | 'input'>>;
   removeMember?: Resolver<ResolversTypes['OkPayload'], ParentType, ContextType, RequireFields<MutationRemoveMemberArgs, 'userId'>>;
   replaceInvoiceLines?: Resolver<ResolversTypes['InvoicePayload'], ParentType, ContextType, RequireFields<MutationReplaceInvoiceLinesArgs, 'id' | 'lines'>>;
@@ -812,8 +925,10 @@ export type OrganizationResolvers<ContextType = GraphQLContext, ParentType exten
   invitations?: Resolver<ReadonlyArray<ResolversTypes['Invitation']>, ParentType, ContextType>;
   members?: Resolver<ReadonlyArray<ResolversTypes['Member']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  plan?: Resolver<ResolversTypes['Plan'], ParentType, ContextType>;
   slug?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   timeZone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  usage?: Resolver<ResolversTypes['Usage'], ParentType, ContextType>;
   viewerRole?: Resolver<ResolversTypes['Role'], ParentType, ContextType>;
 };
 
@@ -836,7 +951,28 @@ export type PageInfoResolvers<ContextType = GraphQLContext, ParentType extends R
 export type PaymentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Payment'] = ResolversParentTypes['Payment']> = {
   amount?: Resolver<ResolversTypes['Money'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  method?: Resolver<ResolversTypes['PaymentMethod'], ParentType, ContextType>;
   recordedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  reference?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+};
+
+export type PlanResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Plan'] = ResolversParentTypes['Plan']> = {
+  code?: Resolver<ResolversTypes['PlanCode'], ParentType, ContextType>;
+  features?: Resolver<ResolversTypes['PlanFeatures'], ParentType, ContextType>;
+  limits?: Resolver<ResolversTypes['PlanLimits'], ParentType, ContextType>;
+  monthlyPrice?: Resolver<ResolversTypes['Money'], ParentType, ContextType>;
+};
+
+export type PlanFeaturesResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PlanFeatures'] = ResolversParentTypes['PlanFeatures']> = {
+  auditExport?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  customBranding?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  mfaEnforcement?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+};
+
+export type PlanLimitsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PlanLimits'] = ResolversParentTypes['PlanLimits']> = {
+  customers?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  invoicesPerMonth?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  seats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
 };
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
@@ -846,6 +982,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   invoice?: Resolver<Maybe<ResolversTypes['Invoice']>, ParentType, ContextType, RequireFields<QueryInvoiceArgs, 'id'>>;
   invoices?: Resolver<ResolversTypes['InvoiceConnection'], ParentType, ContextType, RequireFields<QueryInvoicesArgs, 'first'>>;
   organization?: Resolver<Maybe<ResolversTypes['Organization']>, ParentType, ContextType>;
+  plans?: Resolver<ReadonlyArray<ResolversTypes['Plan']>, ParentType, ContextType>;
   viewer?: Resolver<Maybe<ResolversTypes['Viewer']>, ParentType, ContextType>;
 };
 
@@ -860,6 +997,12 @@ export type SessionResolvers<ContextType = GraphQLContext, ParentType extends Re
 export type StatusCountResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['StatusCount'] = ResolversParentTypes['StatusCount']> = {
   count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['InvoiceStatus'], ParentType, ContextType>;
+};
+
+export type UsageResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Usage'] = ResolversParentTypes['Usage']> = {
+  customers?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  invoicesThisMonth?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  seats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 };
 
 export type UserErrorResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['UserError'] = ResolversParentTypes['UserError']> = {
@@ -880,6 +1023,7 @@ export type ViewerResolvers<ContextType = GraphQLContext, ParentType extends Res
 export type Resolvers<ContextType = GraphQLContext> = {
   AuthPayload?: AuthPayloadResolvers<ContextType>;
   BigInt?: GraphQLScalarType;
+  ChangePlanPayload?: ChangePlanPayloadResolvers<ContextType>;
   CurrencyTotals?: CurrencyTotalsResolvers<ContextType>;
   Customer?: CustomerResolvers<ContextType>;
   CustomerConnection?: CustomerConnectionResolvers<ContextType>;
@@ -906,9 +1050,13 @@ export type Resolvers<ContextType = GraphQLContext> = {
   OrganizationSummary?: OrganizationSummaryResolvers<ContextType>;
   PageInfo?: PageInfoResolvers<ContextType>;
   Payment?: PaymentResolvers<ContextType>;
+  Plan?: PlanResolvers<ContextType>;
+  PlanFeatures?: PlanFeaturesResolvers<ContextType>;
+  PlanLimits?: PlanLimitsResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   Session?: SessionResolvers<ContextType>;
   StatusCount?: StatusCountResolvers<ContextType>;
+  Usage?: UsageResolvers<ContextType>;
   UserError?: UserErrorResolvers<ContextType>;
   Viewer?: ViewerResolvers<ContextType>;
 };

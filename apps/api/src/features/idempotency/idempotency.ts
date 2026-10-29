@@ -48,6 +48,25 @@ export const KEY_REUSED: Outcome = {
 };
 
 /**
+ * The stored outcome for this key, if the request was already processed. For operations with
+ * side effects outside MongoDB (a gateway charge), check this *before* the side effect: a
+ * replay must return the first outcome, not re-run business checks that the first run's own
+ * writes would now fail (e.g. "plan unchanged" right after the plan was changed).
+ */
+export async function storedOutcome(
+  operation: string,
+  key: string,
+  userId: string,
+  input: unknown,
+): Promise<Outcome | undefined> {
+  const existing = await IdempotencyKey.findOne({ key }).lean().exec();
+  if (!existing) return undefined;
+  return existing.requestHash === hashRequest(operation, userId, input)
+    ? (existing.outcome as Outcome)
+    : KEY_REUSED;
+}
+
+/**
  * Runs `work` at most once per key, inside one transaction with the key record. `work` must do
  * all of its writes through the models (so they join the transaction) and nothing else.
  */

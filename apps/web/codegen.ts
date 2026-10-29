@@ -4,7 +4,7 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 // variable types for free. Scalars arrive as JSON strings (BigInt, Date, DateTime).
 const config: CodegenConfig = {
   schema: '../../packages/graphql/schema/tenant/*.graphql',
-  documents: ['src/**/*.{ts,tsx}', '!src/graphql/__generated__/**'],
+  documents: ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}', '!src/graphql/__generated__/**'],
   ignoreNoDocuments: true,
   generates: {
     'src/graphql/__generated__/': {

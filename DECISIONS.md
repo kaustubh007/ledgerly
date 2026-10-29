@@ -2,6 +2,88 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Phase 4 (2026-10-29)
+
+### Plans and limits
+
+- **Plan numbers.** FREE: 5 customers, 10 invoices a month, 2 seats, no features. PRO (USD 29 a
+  month): 500 / 1,000 / 10, custom branding. BUSINESS (USD 99 a month): unlimited, every
+  feature. The catalogue is a table in `@ledgerly/domain` (`PLANS`), shared by the API and the
+  web app. Prices are USD only.
+- **Feature flags exist in the catalogue but nothing enforces them yet.** Custom branding needs
+  PDFs (Phase 6), MFA enforcement needs MFA, and audit export needs the audit log.
+- **Write skew is prevented with a lock document.** "Count, then insert" inside a transaction is
+  not enough on MongoDB: two transactions can each count four customers and each insert a fifth,
+  because their writes do not overlap. `checkCapacity` first writes `capacity:<resource>` in the
+  per-org counter collection (`touchLock`), so concurrent creators conflict and one retries
+  against the new count. The concurrency test (10 in parallel on FREE gives exactly 5) failed 3
+  out of 3 runs with the lock removed.
+- **Invoices per month count by `createdAt`, in UTC months, by real time.** The organisation's
+  time zone would be fairer, but it is not editable yet (see "not done").
+- **Open invitations count as seats.** Otherwise a FREE org could invite twenty people and let
+  the first two to accept win. Re-inviting the same address does not take another seat.
+- **Downgrading never deletes or locks data.** Over-limit resources stay readable and editable;
+  only creating more is refused (`PLAN_LIMIT_REACHED`). The billing page lists what will be over
+  the limit before the user confirms (`overLimitAfterChange`).
+- **No proration.** An upgrade charges the target plan's full monthly price; a downgrade charges
+  nothing and refunds nothing. Real billing periods arrive with the Phase 8 stretch work, if at all.
+
+### Charging
+
+- **One simulator, not two.** The plan named a `BillingGatewaySimulator` for plans and a
+  `PaymentGatewaySimulator` for invoices. Both are "charge a card", so there is one
+  `PaymentGateway` port and one `PaymentGatewaySimulator`; PLAN.md was corrected.
+- **The gateway is never called inside a database transaction.** A transaction may be retried
+  by the driver; a charge must not be. Order: replay check (`storedOutcome`) → validate → domain
+  dry run → charge → record idempotently. If recording then fails (the invoice was paid in
+  full by someone else in the meantime), the charge is refunded and the user gets
+  `PAYMENT_REFUNDED`. Tested with a race.
+- **The gateway idempotency key is a digest of our key and the charge parameters**
+  (`gatewayKey`). With our key alone, "declined card, then retry with a good card" reused the
+  key for a different request and the gateway refused it. Now a retry of the same request
+  replays; a changed request is a new charge.
+
+### Web
+
+- **Forms: `useActionState` for small action forms, react-hook-form for large ones.** Payment,
+  plan and invoice action forms are a few fields and benefit from pending state and
+  `useOptimistic`; the customer form keeps react-hook-form + zod for field-level errors. Both
+  show server `userErrors` by code.
+- **Idempotency keys come from the form** (`useIdempotencyKey`): one key per intent, renewed
+  only after a success, so a double click or a retry after a network error is the same request.
+- **Cache updates use `cache.updateQuery`**, not `cache.modify`: typed by the generated document
+  and it fails loudly if the query shape changes.
+- **Forms that default to the open balance are keyed by it**, so they reset after a payment
+  instead of keeping a stale default.
+- **Invoice filters live in the URL.** `useOptimistic` holds the query string during the
+  transition: quick successive changes otherwise lost the first one, because both
+  `useSearchParams` and `window.location` are stale until navigation commits.
+- **`@ledgerly/domain` runs in the browser** for the invoice total preview (the same rounding as
+  the server), permissions (`can`) and allowed actions (`canPerform`). The server still decides.
+- **`'use client'` modules export only components.** A Server Component that imports a constant
+  from a client module gets a client reference, not the value. This crashed the invoices page,
+  and it had silently emptied the customers page's `PreloadQuery` variables since Phase 3
+  (`first` was missing, so the server default applied). Shared values now live in
+  `constants.ts` files, and `test/client-boundary.test.ts` fails on any other export.
+- **Web codegen excludes test files.** The fake query in `links.test.ts` made
+  `codegen:check` fail. That was already true on the Phase 3 tree, so Phase 3's CI would have
+  been red; it was not caught because CI could not be observed from this environment.
+
+### Tests
+
+- **The E2E run fails if either server logs an error** (the Phase 3 retro's change). Both
+  servers' output is teed to `.e2e-logs/`; global teardown fails on a web `⨯` line or an API
+  log at level 50 (error) or 60 (fatal).
+- **The E2E database is dropped by the API's start command**, before the API builds its indexes.
+  Dropping it in global setup raced the API's index build.
+
+### Not done in Phase 4
+
+- Invoice PDFs (Phase 6), deleting customers, editing the organisation's time zone, proration,
+  feature-flag enforcement, and an E2E test signed in as a VIEWER (covered by unit tests and the
+  API's permission tests).
+- German and Arabic strings are machine-quality and need a native speaker's review.
+
 ## Phase 3 (2026-10-28)
 
 - **Linting without `eslint-config-next`.** It depends on `eslint-plugin-jsx-a11y`,

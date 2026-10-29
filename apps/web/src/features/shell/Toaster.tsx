@@ -4,9 +4,8 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@web/store/hooks';
 import { toastDismissed } from '@web/store/slices/toasts';
+import { TOAST_TIMEOUT_MS } from './constants';
 import styles from './AppShell.module.scss';
-
-export const TOAST_TIMEOUT_MS = 6000;
 
 /**
  * Notifications in a polite live region: screen readers announce new ones without interrupting.

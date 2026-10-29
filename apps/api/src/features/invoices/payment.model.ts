@@ -8,6 +8,9 @@ const paymentSchema = new Schema(
     amountMinor: { type: Schema.Types.BigInt, required: true },
     currency: { type: String, required: true },
     recordedBy: { type: Schema.Types.ObjectId, required: true },
+    method: { type: String, required: true, enum: ['MANUAL', 'CARD'], default: 'MANUAL' },
+    /** The gateway's charge id, for card payments. */
+    reference: { type: String, default: null },
   },
   { timestamps: true },
 );

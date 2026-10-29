@@ -1,6 +1,12 @@
 {
-  "meta": { "title": "Ledgerly", "description": "Rechnungen für kleine Teams" },
-  "a11y": { "skipToContent": "Zum Inhalt springen", "mainNavigation": "Hauptnavigation" },
+  "meta": {
+    "title": "Ledgerly",
+    "description": "Rechnungen für kleine Teams"
+  },
+  "a11y": {
+    "skipToContent": "Zum Inhalt springen",
+    "mainNavigation": "Hauptnavigation"
+  },
   "auth": {
     "signInTitle": "Anmelden",
     "signUpTitle": "Konto erstellen",
@@ -24,7 +30,26 @@
     "INVALID_EMAIL": "Bitte eine gültige E-Mail-Adresse eingeben.",
     "TOO_SMALL": "Das ist zu kurz.",
     "TOO_BIG": "Das ist zu lang.",
-    "generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+    "generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    "PLAN_LIMIT_REACHED": "Das Limit Ihres Tarifs ist erreicht.",
+    "OVERPAYMENT": "Der Betrag ist höher als der offene Saldo.",
+    "CURRENCY_MISMATCH": "Der Betrag muss in der Rechnungswährung sein.",
+    "NON_POSITIVE_AMOUNT": "Der Betrag muss größer als null sein.",
+    "INVALID_AMOUNT": "Geben Sie einen Betrag wie 12.30 ein, mit nicht mehr Nachkommastellen, als die Währung erlaubt.",
+    "INVALID_QUANTITY": "Geben Sie eine Menge mit höchstens drei Nachkommastellen ein.",
+    "INVALID_DATE": "Geben Sie ein gültiges Datum ein.",
+    "INVALID_LOCALE": "Wählen Sie eine gültige Sprache.",
+    "UNSUPPORTED_CURRENCY": "Diese Währung wird nicht unterstützt.",
+    "CARD_DECLINED": "Die Karte wurde abgelehnt.",
+    "PAYMENT_REFUNDED": "Die Karte wurde belastet und sofort erstattet.",
+    "PAYMENT_METHOD_REQUIRED": "Wählen Sie eine Karte.",
+    "INVALID_TRANSITION": "Das ist für diese Rechnung im aktuellen Status nicht möglich.",
+    "EMPTY_INVOICE": "Eine Rechnung braucht einen positiven Gesamtbetrag, bevor sie versendet werden kann.",
+    "NEGATIVE_UNIT_PRICE": "Einzelpreise dürfen nicht negativ sein.",
+    "NOT_FOUND": "Das existiert nicht mehr.",
+    "PLAN_UNCHANGED": "Das ist bereits Ihr Tarif.",
+    "IDEMPOTENCY_KEY_REUSED": "Dieses Formular wurde bereits für eine andere Anfrage verwendet. Laden Sie die Seite neu.",
+    "INVALID_PLAN": "Wählen Sie einen Tarif."
   },
   "shell": {
     "organization": "Organisation",
@@ -41,7 +66,12 @@
     "dismiss": "Schließen",
     "notifications": "Benachrichtigungen"
   },
-  "nav": { "dashboard": "Übersicht", "customers": "Kunden" },
+  "nav": {
+    "dashboard": "Übersicht",
+    "customers": "Kunden",
+    "invoices": "Rechnungen",
+    "billing": "Abrechnung"
+  },
   "roles": {
     "OWNER": "Inhaber",
     "ADMIN": "Admin",
@@ -63,11 +93,146 @@
     "email": "E-Mail",
     "currency": "Währung",
     "empty": "Noch keine Kunden.",
-    "loadMore": "Mehr laden"
+    "loadMore": "Mehr laden",
+    "add": "Kunde hinzufügen",
+    "create": "Kunde anlegen",
+    "created": "Kunde {name} angelegt.",
+    "updated": "Kunde {name} gespeichert.",
+    "documentLocale": "Dokumentsprache",
+    "documentLocaleHint": "Rechnungen und E-Mails an diesen Kunden verwenden diese Sprache.",
+    "billingAddress": "Rechnungsadresse",
+    "edit": "Kunde bearbeiten",
+    "invoicesOf": "Rechnungen für {name}"
   },
   "orgPicker": {
     "title": "Ihre Organisationen",
     "none": "Sie sind noch in keiner Organisation Mitglied."
   },
-  "notFound": { "title": "Seite nicht gefunden", "back": "Zu Ihren Organisationen" }
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "back": "Zu Ihren Organisationen"
+  },
+  "common": {
+    "save": "Speichern",
+    "saving": "Wird gespeichert…"
+  },
+  "invoices": {
+    "title": "Rechnungen",
+    "new": "Neue Rechnung",
+    "filters": "Rechnungen filtern",
+    "statusFilter": "Status",
+    "customerFilter": "Kunde",
+    "all": "Alle",
+    "empty": "Keine passenden Rechnungen.",
+    "loadMore": "Mehr laden",
+    "number": "Nummer",
+    "customer": "Kunde",
+    "statusColumn": "Status",
+    "dueDate": "Fälligkeitsdatum",
+    "total": "Gesamt",
+    "paid": "Bezahlt",
+    "balance": "Offener Betrag",
+    "draft": "Entwurf",
+    "currency": "Währung",
+    "lines": "Positionen",
+    "lineN": "Position {n}",
+    "description": "Beschreibung",
+    "quantity": "Menge",
+    "unitPrice": "Einzelpreis",
+    "descriptionN": "Beschreibung, Position {n}",
+    "quantityN": "Menge, Position {n}",
+    "unitPriceN": "Einzelpreis, Position {n}",
+    "lineTotalN": "Summe, Position {n}",
+    "moveUpN": "Position {n} nach oben",
+    "moveDownN": "Position {n} nach unten",
+    "removeN": "Position {n} entfernen",
+    "addLine": "Position hinzufügen",
+    "createDraft": "Entwurf anlegen",
+    "createdDraft": "Rechnungsentwurf angelegt.",
+    "needCustomer": "Rechnungen gehen an Kunden.",
+    "addCustomerFirst": "Legen Sie zuerst einen Kunden an.",
+    "invoiceTitle": "Rechnung {number}",
+    "notFound": "Rechnung nicht gefunden",
+    "send": "Rechnung senden",
+    "sending": "Wird gesendet…",
+    "sent": "Rechnung {number} gesendet.",
+    "void": "Stornieren",
+    "confirmVoid": "Ja, diese Rechnung stornieren",
+    "cancel": "Abbrechen",
+    "voided": "Rechnung storniert.",
+    "payments": "Zahlungen",
+    "noPayments": "Noch keine Zahlungen.",
+    "recordedAt": "Erfasst",
+    "method": "Art",
+    "amountColumn": "Betrag",
+    "pendingPayment": "Wird erfasst…",
+    "recordPayment": "Zahlung erfassen",
+    "recording": "Wird erfasst…",
+    "payByCard": "Mit Karte bezahlen",
+    "charging": "Wird belastet…",
+    "amount": "Betrag ({currency})",
+    "paymentRecorded": "Zahlung über {amount} erfasst.",
+    "testCard": "Testkarte",
+    "testCardHint": "Zahlungen laufen über ein simuliertes Gateway; es fließt kein Geld.",
+    "methods": {
+      "MANUAL": "Manuell",
+      "CARD": "Karte"
+    },
+    "cards": {
+      "pm_card_visa": "Visa (genehmigt)",
+      "pm_card_mastercard": "Mastercard (genehmigt)",
+      "pm_card_declined": "Abgelehnte Karte",
+      "pm_card_insufficient_funds": "Unzureichende Deckung"
+    },
+    "status": {
+      "DRAFT": "Entwurf",
+      "SENT": "Gesendet",
+      "PARTIALLY_PAID": "Teilweise bezahlt",
+      "PAID": "Bezahlt",
+      "VOID": "Storniert",
+      "OVERDUE": "Überfällig"
+    }
+  },
+  "billing": {
+    "title": "Abrechnung",
+    "currentPlan": "Ihr Tarif: {plan}",
+    "plansTitle": "Tarife",
+    "perMonth": "{price} pro Monat",
+    "plans": {
+      "FREE": "Free",
+      "PRO": "Pro",
+      "BUSINESS": "Business"
+    },
+    "usage": {
+      "customers": "{limit, plural, =-1 {{used} Kunden} other {{used} von # Kunden}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {{used} Rechnungen diesen Monat} other {{used} von # Rechnungen diesen Monat}}",
+      "seats": "{limit, plural, =-1 {{used} Plätze belegt} other {{used} von # Plätzen belegt}}"
+    },
+    "limits": {
+      "customers": "{limit, plural, =-1 {Unbegrenzt viele Kunden} other {Bis zu # Kunden}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {Unbegrenzt viele Rechnungen} other {Bis zu # Rechnungen pro Monat}}",
+      "seats": "{limit, plural, =-1 {Unbegrenzt viele Plätze} other {Bis zu # Plätze}}"
+    },
+    "features": {
+      "customBranding": "Eigenes Branding",
+      "mfaEnforcement": "Zwei-Faktor-Anmeldung erzwingen",
+      "auditExport": "Export des Prüfprotokolls"
+    },
+    "resources": {
+      "customers": "Kunden",
+      "invoicesPerMonth": "Rechnungen diesen Monat",
+      "seats": "Plätze"
+    },
+    "changePlan": "Tarif wechseln",
+    "newPlan": "Neuer Tarif",
+    "upgrade": "Auf {plan} upgraden",
+    "downgrade": "Zu {plan} wechseln",
+    "changing": "Tarif wird gewechselt…",
+    "changed": "Sie nutzen jetzt {plan}.",
+    "ownerOnly": "Nur Inhaber können den Tarif wechseln.",
+    "testCard": "Testkarte",
+    "testCardHint": "Die Abrechnung läuft über ein simuliertes Gateway; es fließt kein Geld.",
+    "downgradeWarning": "Sie liegen über dem Limit dieses Tarifs bei: {resources}. Es wird nichts gelöscht, aber Sie können erst wieder etwas hinzufügen, wenn Sie unter dem Limit liegen.",
+    "upgradeLink": "Tarife ansehen und upgraden"
+  }
 }

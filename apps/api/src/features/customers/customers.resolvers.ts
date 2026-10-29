@@ -1,6 +1,8 @@
 import { CustomerInput, parseInput } from '@ledgerly/validation';
 import type { z } from 'zod';
+import { inTransaction } from '../../data/connection.ts';
 import { requireTenant } from '../../graphql/context.ts';
+import { checkCapacity } from '../billing/limits.ts';
 import { objectId } from '../../graphql/ids.ts';
 import {
   afterCursor,
@@ -51,12 +53,17 @@ export const customersResolvers: Resolvers = {
     },
   },
   Mutation: {
-    createCustomer: async (_, { input }) => {
+    createCustomer: async (_, { input }, ctx) => {
       requireTenant('customers:write');
       const parsed = parseInput(CustomerInput, input);
       if (!parsed.ok) return { customer: null, userErrors: parsed.userErrors };
-      const customer = await new Customer(customerFields(parsed.value)).save();
-      return { customer: customer.toObject(), userErrors: [] };
+      // The plan limit and the insert share a transaction (see checkCapacity: write skew).
+      return inTransaction(async () => {
+        const overLimit = await checkCapacity('customers', ctx.deps.clock);
+        if (overLimit) return { customer: null, userErrors: [overLimit] };
+        const [customer] = await Customer.create([customerFields(parsed.value)]);
+        return { customer: customer?.toObject() ?? null, userErrors: [] };
+      });
     },
     updateCustomer: async (_, { id, input }) => {
       requireTenant('customers:write');

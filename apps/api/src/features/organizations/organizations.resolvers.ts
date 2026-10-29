@@ -20,6 +20,7 @@ import { Membership } from './membership.model.ts';
 import { Organization } from './organization.model.ts';
 import type { MemberParent } from './member.types.ts';
 import { createOrganization } from './organizations.service.ts';
+import { checkCapacity } from '../billing/limits.ts';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -113,7 +114,17 @@ export const organizationsResolvers: Resolvers = {
       const now = ctx.deps.clock.now();
       const expiresAt = new Date(now.getTime() + INVITATION_TTL_MS);
       const token = randomToken();
-      const invitation = await inTransaction(async () => {
+      const result = await inTransaction(async () => {
+        // An open invitation already holds a seat; re-inviting refreshes it without a new one.
+        const reinvite = await Invitation.exists({
+          email,
+          acceptedAt: null,
+          expiresAt: { $gt: now },
+        }).exec();
+        if (!reinvite) {
+          const overLimit = await checkCapacity('seats', ctx.deps.clock);
+          if (overLimit) return { error: overLimit };
+        }
         // Re-inviting refreshes the invitation; any earlier link stops working.
         const inv = await Invitation.findOneAndUpdate(
           { email },
@@ -144,9 +155,10 @@ export const organizationsResolvers: Resolvers = {
           organization: org.name,
           link: `${ctx.deps.config.PUBLIC_ORIGIN}/invitations/accept?token=${token}`,
         });
-        return inv;
+        return { invitation: inv };
       });
-      return { invitation, userErrors: [] };
+      if ('error' in result) return { invitation: null, userErrors: [result.error] };
+      return { invitation: result.invitation, userErrors: [] };
     },
 
     acceptInvitation: async (_, { token }, ctx) => {

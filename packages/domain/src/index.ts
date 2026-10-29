@@ -45,3 +45,18 @@ export {
   type MembershipChange,
   type MembershipChangeRefusal,
 } from './access/permissions.ts';
+export {
+  canAdd,
+  chargeForChange,
+  isPlanCode,
+  overLimitAfterChange,
+  PlanCode,
+  planChange,
+  planOf,
+  PLANS,
+  type LimitedResource,
+  type Plan,
+  type PlanChange,
+  type PlanFeatures,
+  type PlanLimits,
+} from './billing/plans.ts';

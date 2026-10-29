@@ -5,9 +5,8 @@ import { useState } from 'react';
 import { CSRF_HEADER, getRefresher } from '@web/lib/auth/refresh';
 import { useAppDispatch, useAppSelector } from '@web/store/hooks';
 import { selectViewer, signedOut } from '@web/store/slices/session';
+import { LOGOUT_URL } from './constants';
 import styles from './AppShell.module.scss';
-
-export const LOGOUT_URL = '/graphql/auth/logout';
 
 export function UserMenu({ onSignedOut }: { onSignedOut: (signInHref: string) => void }) {
   const t = useTranslations('shell');

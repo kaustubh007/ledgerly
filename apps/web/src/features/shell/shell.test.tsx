@@ -7,7 +7,8 @@ import { toastAdded } from '@web/store/slices/toasts';
 import { useAppDispatch } from '@web/store/hooks';
 import { AppShell } from './AppShell';
 import { hrefInOrg, OrgSwitcher } from './OrgSwitcher';
-import { TOAST_TIMEOUT_MS, Toaster } from './Toaster';
+import { TOAST_TIMEOUT_MS } from './constants';
+import { Toaster } from './Toaster';
 
 vi.mock('next/navigation', () => nextNavigationMock);
 vi.mock('@web/i18n/navigation', () => i18nNavigationMock);
@@ -129,5 +130,15 @@ describe('AppShell', () => {
   it('renders nothing without an active organisation', () => {
     const { container } = renderWithProviders(<AppShell>x</AppShell>);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('isCurrent', () => {
+  it('marks the dashboard only on itself, other sections also on their sub-pages', async () => {
+    const { isCurrent } = await import('./AppShell');
+    expect(isCurrent('/o/acme', '/o/acme', '/o/acme')).toBe(true);
+    expect(isCurrent('/o/acme/invoices', '/o/acme', '/o/acme')).toBe(false);
+    expect(isCurrent('/o/acme/invoices/123', '/o/acme/invoices', '/o/acme')).toBe(true);
+    expect(isCurrent('/o/acme/invoicesX', '/o/acme/invoices', '/o/acme')).toBe(false);
   });
 });

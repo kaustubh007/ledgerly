@@ -4,7 +4,7 @@ import { parseTheme } from '@web/lib/theme';
 import { THEME_COOKIE } from '@web/store/middleware/preferences';
 import { StoreProvider } from '@web/store/StoreProvider';
 import { initialUiState } from '@web/store/slices/ui';
-import styles from '@web/features/auth/AuthForm.module.scss';
+import styles from '@web/components/form/Form.module.scss';
 
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);

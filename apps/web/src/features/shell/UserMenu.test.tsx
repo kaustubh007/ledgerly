@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CSRF_HEADER, getRefresher } from '@web/lib/auth/refresh';
 import { expectNoAxeViolations, renderWithProviders, sessionState } from '@web/test/render';
-import { LOGOUT_URL, UserMenu } from './UserMenu';
+import { LOGOUT_URL } from './constants';
+import { UserMenu } from './UserMenu';
 
 vi.mock('@web/lib/auth/refresh', () => {
   const refresher = { refresh: vi.fn(), announceSignedOut: vi.fn(), onSignedOut: vi.fn() };

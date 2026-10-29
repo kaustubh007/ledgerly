@@ -1,6 +1,12 @@
 {
-  "meta": { "title": "Ledgerly", "description": "الفوترة للفرق الصغيرة" },
-  "a11y": { "skipToContent": "انتقل إلى المحتوى", "mainNavigation": "التنقل الرئيسي" },
+  "meta": {
+    "title": "Ledgerly",
+    "description": "الفوترة للفرق الصغيرة"
+  },
+  "a11y": {
+    "skipToContent": "انتقل إلى المحتوى",
+    "mainNavigation": "التنقل الرئيسي"
+  },
   "auth": {
     "signInTitle": "تسجيل الدخول",
     "signUpTitle": "إنشاء حسابك",
@@ -24,7 +30,26 @@
     "INVALID_EMAIL": "أدخل بريدًا إلكترونيًا صالحًا.",
     "TOO_SMALL": "هذا قصير جدًا.",
     "TOO_BIG": "هذا طويل جدًا.",
-    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "PLAN_LIMIT_REACHED": "تم بلوغ حد خطتك.",
+    "OVERPAYMENT": "المبلغ أكبر من الرصيد المستحق.",
+    "CURRENCY_MISMATCH": "يجب أن يكون المبلغ بعملة الفاتورة.",
+    "NON_POSITIVE_AMOUNT": "يجب أن يكون المبلغ أكبر من صفر.",
+    "INVALID_AMOUNT": "أدخل مبلغًا مثل 12.30، دون منازل عشرية أكثر مما تسمح به العملة.",
+    "INVALID_QUANTITY": "أدخل كمية بثلاث منازل عشرية على الأكثر.",
+    "INVALID_DATE": "أدخل تاريخًا صالحًا.",
+    "INVALID_LOCALE": "اختر لغة صالحة.",
+    "UNSUPPORTED_CURRENCY": "هذه العملة غير مدعومة.",
+    "CARD_DECLINED": "تم رفض البطاقة.",
+    "PAYMENT_REFUNDED": "تم خصم المبلغ من البطاقة ثم استرداده فورًا.",
+    "PAYMENT_METHOD_REQUIRED": "اختر بطاقة.",
+    "INVALID_TRANSITION": "لا يمكن تنفيذ ذلك على هذه الفاتورة في حالتها الحالية.",
+    "EMPTY_INVOICE": "يجب أن يكون إجمالي الفاتورة موجبًا قبل إرسالها.",
+    "NEGATIVE_UNIT_PRICE": "لا يمكن أن يكون سعر الوحدة سالبًا.",
+    "NOT_FOUND": "لم يعد موجودًا.",
+    "PLAN_UNCHANGED": "هذه هي خطتك بالفعل.",
+    "IDEMPOTENCY_KEY_REUSED": "استُخدم هذا النموذج بالفعل لطلب مختلف. أعد تحميل الصفحة.",
+    "INVALID_PLAN": "اختر خطة."
   },
   "shell": {
     "organization": "المؤسسة",
@@ -41,8 +66,18 @@
     "dismiss": "إغلاق",
     "notifications": "الإشعارات"
   },
-  "nav": { "dashboard": "لوحة المعلومات", "customers": "العملاء" },
-  "roles": { "OWNER": "المالك", "ADMIN": "مسؤول", "ACCOUNTANT": "محاسب", "VIEWER": "مشاهد" },
+  "nav": {
+    "dashboard": "لوحة المعلومات",
+    "customers": "العملاء",
+    "invoices": "الفواتير",
+    "billing": "الفوترة"
+  },
+  "roles": {
+    "OWNER": "المالك",
+    "ADMIN": "مسؤول",
+    "ACCOUNTANT": "محاسب",
+    "VIEWER": "مشاهد"
+  },
   "dashboard": {
     "title": "لوحة المعلومات",
     "outstanding": "المستحق",
@@ -58,8 +93,146 @@
     "email": "البريد الإلكتروني",
     "currency": "العملة",
     "empty": "لا يوجد عملاء بعد.",
-    "loadMore": "تحميل المزيد"
+    "loadMore": "تحميل المزيد",
+    "add": "إضافة عميل",
+    "create": "إنشاء العميل",
+    "created": "تم إنشاء العميل {name}.",
+    "updated": "تم حفظ العميل {name}.",
+    "documentLocale": "لغة المستندات",
+    "documentLocaleHint": "تستخدم الفواتير والرسائل إلى هذا العميل هذه اللغة.",
+    "billingAddress": "عنوان الفوترة",
+    "edit": "تعديل العميل",
+    "invoicesOf": "فواتير {name}"
   },
-  "orgPicker": { "title": "مؤسساتك", "none": "لست عضوًا في أي مؤسسة بعد." },
-  "notFound": { "title": "الصفحة غير موجودة", "back": "انتقل إلى مؤسساتك" }
+  "orgPicker": {
+    "title": "مؤسساتك",
+    "none": "لست عضوًا في أي مؤسسة بعد."
+  },
+  "notFound": {
+    "title": "الصفحة غير موجودة",
+    "back": "انتقل إلى مؤسساتك"
+  },
+  "common": {
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…"
+  },
+  "invoices": {
+    "title": "الفواتير",
+    "new": "فاتورة جديدة",
+    "filters": "تصفية الفواتير",
+    "statusFilter": "الحالة",
+    "customerFilter": "العميل",
+    "all": "الكل",
+    "empty": "لا توجد فواتير مطابقة.",
+    "loadMore": "تحميل المزيد",
+    "number": "الرقم",
+    "customer": "العميل",
+    "statusColumn": "الحالة",
+    "dueDate": "تاريخ الاستحقاق",
+    "total": "الإجمالي",
+    "paid": "المدفوع",
+    "balance": "الرصيد المستحق",
+    "draft": "مسودة",
+    "currency": "العملة",
+    "lines": "البنود",
+    "lineN": "البند {n}",
+    "description": "الوصف",
+    "quantity": "الكمية",
+    "unitPrice": "سعر الوحدة",
+    "descriptionN": "الوصف، البند {n}",
+    "quantityN": "الكمية، البند {n}",
+    "unitPriceN": "سعر الوحدة، البند {n}",
+    "lineTotalN": "الإجمالي، البند {n}",
+    "moveUpN": "نقل البند {n} للأعلى",
+    "moveDownN": "نقل البند {n} للأسفل",
+    "removeN": "حذف البند {n}",
+    "addLine": "إضافة بند",
+    "createDraft": "إنشاء مسودة",
+    "createdDraft": "تم إنشاء مسودة الفاتورة.",
+    "needCustomer": "الفواتير تكون لعملاء.",
+    "addCustomerFirst": "أضف عميلًا أولًا.",
+    "invoiceTitle": "الفاتورة {number}",
+    "notFound": "الفاتورة غير موجودة",
+    "send": "إرسال الفاتورة",
+    "sending": "جارٍ الإرسال…",
+    "sent": "تم إرسال الفاتورة {number}.",
+    "void": "إلغاء",
+    "confirmVoid": "نعم، ألغِ هذه الفاتورة",
+    "cancel": "تراجع",
+    "voided": "تم إلغاء الفاتورة.",
+    "payments": "الدفعات",
+    "noPayments": "لا توجد دفعات بعد.",
+    "recordedAt": "تاريخ التسجيل",
+    "method": "الطريقة",
+    "amountColumn": "المبلغ",
+    "pendingPayment": "جارٍ التسجيل…",
+    "recordPayment": "تسجيل دفعة",
+    "recording": "جارٍ التسجيل…",
+    "payByCard": "الدفع بالبطاقة",
+    "charging": "جارٍ الخصم…",
+    "amount": "المبلغ ({currency})",
+    "paymentRecorded": "تم تسجيل دفعة بقيمة {amount}.",
+    "testCard": "بطاقة اختبار",
+    "testCardHint": "تمر المدفوعات عبر بوابة محاكاة؛ لا تنتقل أي أموال.",
+    "methods": {
+      "MANUAL": "يدوي",
+      "CARD": "بطاقة"
+    },
+    "cards": {
+      "pm_card_visa": "فيزا (مقبولة)",
+      "pm_card_mastercard": "ماستركارد (مقبولة)",
+      "pm_card_declined": "بطاقة مرفوضة",
+      "pm_card_insufficient_funds": "رصيد غير كافٍ"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "SENT": "مرسلة",
+      "PARTIALLY_PAID": "مدفوعة جزئيًا",
+      "PAID": "مدفوعة",
+      "VOID": "ملغاة",
+      "OVERDUE": "متأخرة"
+    }
+  },
+  "billing": {
+    "title": "الفوترة",
+    "currentPlan": "خطتك: {plan}",
+    "plansTitle": "الخطط",
+    "perMonth": "{price} شهريًا",
+    "plans": {
+      "FREE": "مجانية",
+      "PRO": "احترافية",
+      "BUSINESS": "أعمال"
+    },
+    "usage": {
+      "customers": "{limit, plural, =-1 {{used} عميل} other {{used} من # عميل}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {{used} فاتورة هذا الشهر} other {{used} من # فاتورة هذا الشهر}}",
+      "seats": "{limit, plural, =-1 {{used} مقعد مستخدم} other {{used} من # مقعد مستخدم}}"
+    },
+    "limits": {
+      "customers": "{limit, plural, =-1 {عملاء بلا حدود} other {حتى # عميل}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {فواتير بلا حدود} other {حتى # فاتورة شهريًا}}",
+      "seats": "{limit, plural, =-1 {مقاعد بلا حدود} other {حتى # مقعد}}"
+    },
+    "features": {
+      "customBranding": "علامة تجارية مخصصة",
+      "mfaEnforcement": "فرض تسجيل الدخول بخطوتين",
+      "auditExport": "تصدير سجل التدقيق"
+    },
+    "resources": {
+      "customers": "العملاء",
+      "invoicesPerMonth": "فواتير هذا الشهر",
+      "seats": "المقاعد"
+    },
+    "changePlan": "تغيير الخطة",
+    "newPlan": "الخطة الجديدة",
+    "upgrade": "الترقية إلى {plan}",
+    "downgrade": "التحويل إلى {plan}",
+    "changing": "جارٍ تغيير الخطة…",
+    "changed": "أنت الآن على خطة {plan}.",
+    "ownerOnly": "يمكن للمالك فقط تغيير الخطة.",
+    "testCard": "بطاقة اختبار",
+    "testCardHint": "تمر الفوترة عبر بوابة محاكاة؛ لا تنتقل أي أموال.",
+    "downgradeWarning": "أنت فوق حد هذه الخطة في: {resources}. لن يُحذف أي شيء، لكن لن تتمكن من الإضافة حتى تصبح دون الحد.",
+    "upgradeLink": "عرض الخطط والترقية"
+  }
 }

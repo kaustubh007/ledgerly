@@ -1,0 +1,46 @@
+.meters {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+
+  label {
+    display: block;
+  }
+
+  meter {
+    inline-size: min(100%, 20rem);
+  }
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.plan {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+
+  &[aria-current='true'] {
+    border: 2px solid var(--color-accent);
+  }
+
+  ul {
+    padding-inline-start: var(--space-3);
+  }
+}
+
+.price {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.warning {
+  padding: var(--space-2);
+  border-inline-start: 4px solid var(--color-danger);
+}

@@ -13,7 +13,7 @@ export interface ServerUserError {
  * react-hook-form with the *same* zod schema the API uses (@ledgerly/validation), plus a way to
  * put the server's `userErrors` onto the right fields (`field` is e.g. `['input', 'email']`).
  */
-export function useAuthForm<T extends FieldValues>(
+export function useZodForm<T extends FieldValues>(
   schema: z.ZodType<T, T>,
   defaults: DefaultValues<T>,
 ) {

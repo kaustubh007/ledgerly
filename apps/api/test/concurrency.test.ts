@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { signUpUser, startTestApp, type TestApp } from './harness.ts';
-import { CREATE_INVOICE, customer, PAY, SEND, sentInvoice } from './fixtures.ts';
+import { CREATE_INVOICE, customer, PAY, SEND, sentInvoice, upgrade } from './fixtures.ts';
 
 // The Phase 2 gate for ADR-0002: the guarantees hold when requests really overlap.
 
@@ -59,6 +59,7 @@ describe('concurrent payments', () => {
 describe('concurrent sends', () => {
   it('twenty invoices sent at once get twenty distinct numbers with no gaps', async () => {
     const user = await signUpUser(app);
+    await upgrade(user); // FREE allows 10 invoices a month
     const customerId = await customer(user);
     const ids = await Promise.all(
       Array.from({ length: 20 }, async () => {

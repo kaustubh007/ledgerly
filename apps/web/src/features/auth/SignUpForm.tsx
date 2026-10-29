@@ -6,17 +6,17 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { SignUpMutation } from '@web/graphql/documents';
 import { Link } from '@web/i18n/navigation';
-import { errorKey, fieldErrorCode } from './errors';
-import { Field } from './Field';
-import { useAuthForm } from './useAuthForm';
-import styles from './AuthForm.module.scss';
+import { fieldErrorCode } from '@web/components/form/errors';
+import { Field, FormError } from '@web/components/form/Field';
+import { useZodForm } from '@web/components/form/useZodForm';
+import styles from '@web/components/form/Form.module.scss';
 
 export function SignUpForm() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
   const [signUp] = useMutation(SignUpMutation);
-  const form = useAuthForm(SignUpInput, {
+  const form = useZodForm(SignUpInput, {
     name: '',
     email: '',
     password: '',
@@ -41,11 +41,7 @@ export function SignUpForm() {
   const serverError = errors.root?.['server']?.type?.toString();
   return (
     <form className={styles['form']} onSubmit={(e) => void onSubmit(e)} noValidate>
-      {serverError && (
-        <p role="alert" className={styles['formError']}>
-          {t.has(errorKey(serverError)) ? t(errorKey(serverError)) : t('errors.generic')}
-        </p>
-      )}
+      <FormError code={serverError} />
       <Field
         label={t('auth.name')}
         autoComplete="name"

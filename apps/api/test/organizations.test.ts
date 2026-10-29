@@ -7,6 +7,7 @@ import {
   type SignedUp,
   type TestApp,
 } from './harness.ts';
+import { upgrade } from './fixtures.ts';
 
 const INVITE = `mutation ($email: String!, $role: Role!) { inviteMember(email: $email, role: $role) { invitation { id email role } userErrors { code field } } }`;
 const ACCEPT = `mutation ($token: String!) { acceptInvitation(token: $token) { organization { slug } userErrors { code } } }`;
@@ -112,6 +113,7 @@ describe('invitations', () => {
 
   it('is limited by role: VIEWER and ACCOUNTANT cannot invite, ADMIN cannot invite an OWNER', async () => {
     const owner = await signUpUser(app);
+    await upgrade(owner); // FREE has two seats
     const viewer = await signUpUser(app);
     const admin = await signUpUser(app);
     await join(owner, viewer, 'VIEWER');
@@ -130,6 +132,7 @@ describe('invitations', () => {
 describe('roles', () => {
   it('protects the owner role and the last owner', async () => {
     const owner = await signUpUser(app);
+    await upgrade(owner); // FREE has two seats
     const admin = await signUpUser(app);
     const member = await signUpUser(app);
     await join(owner, admin, 'ADMIN');

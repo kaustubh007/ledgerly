@@ -151,3 +151,15 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+.panel {
+  margin-block: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+}

@@ -32,9 +32,17 @@ type InvoiceLine {
   total: Money!
 }
 
+enum PaymentMethod {
+  MANUAL
+  CARD
+}
+
 type Payment {
   id: ID!
   amount: Money!
+  method: PaymentMethod!
+  "The gateway's charge id for card payments."
+  reference: String
   recordedAt: DateTime!
 }
 
@@ -67,13 +75,25 @@ input RecordPaymentInput {
   amount: MoneyInput!
 }
 
+input CardPaymentInput {
+  invoiceId: ID!
+  amount: MoneyInput!
+  "A payment method token from the (simulated) gateway, e.g. `pm_card_visa`."
+  paymentMethod: String!
+}
+
 type InvoicePayload {
   invoice: Invoice
   userErrors: [UserError!]!
 }
 
 extend type Query {
-  invoices(first: Int = 20, after: String, status: InvoiceStatus): InvoiceConnection!
+  invoices(
+    first: Int = 20
+    after: String
+    status: InvoiceStatus
+    customerId: ID
+  ): InvoiceConnection!
   invoice(id: ID!): Invoice
 }
 
@@ -83,5 +103,10 @@ extend type Mutation {
   "Allocates the invoice number and emails the customer."
   sendInvoice(id: ID!, idempotencyKey: ID!): InvoicePayload!
   recordPayment(input: RecordPaymentInput!, idempotencyKey: ID!): InvoicePayload!
+  """
+  Charges the card through the payment gateway, then records the payment. If the payment can no
+  longer be recorded (another payment settled the balance meanwhile), the charge is refunded.
+  """
+  payInvoiceByCard(input: CardPaymentInput!, idempotencyKey: ID!): InvoicePayload!
   voidInvoice(id: ID!): InvoicePayload!
 }

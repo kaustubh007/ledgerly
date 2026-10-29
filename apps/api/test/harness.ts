@@ -8,6 +8,7 @@ import { connect, disconnect, dropDatabase, syncIndexes } from '../src/data/conn
 import type { Deps } from '../src/deps.ts';
 import { importAccessTokenKeys } from '../src/features/identity/tokens.ts';
 import { Outbox, type EmailTemplate } from '../src/features/outbox/outbox.ts';
+import { PaymentGatewaySimulator } from '../src/features/payments/payment-gateway.simulator.ts';
 import { CSRF_HEADER } from '../src/http/auth-routes.ts';
 import { createApp, ORG_HEADER } from '../src/http/app.ts';
 
@@ -56,6 +57,7 @@ export async function startTestApp(): Promise<TestApp> {
       config.ACCESS_TOKEN_PUBLIC_JWK,
     ),
     graceKey: Buffer.from(config.REFRESH_GRACE_KEY, 'base64url'),
+    paymentGateway: new PaymentGatewaySimulator(clock),
   };
 
   await connect(config.MONGODB_URI);

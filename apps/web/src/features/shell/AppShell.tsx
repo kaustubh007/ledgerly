@@ -17,6 +17,11 @@ function leave(href: string): void {
   window.location.assign(href);
 }
 
+/** The dashboard is current only on itself; other sections also on their sub-pages. */
+export function isCurrent(pathname: string, href: string, base: string): boolean {
+  return href === base ? pathname === base : pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname(); // without the locale prefix, e.g. /o/acme/customers
@@ -43,6 +48,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const links = [
     { href: base, label: t('nav.dashboard') },
     { href: `${base}/customers`, label: t('nav.customers') },
+    { href: `${base}/invoices`, label: t('nav.invoices') },
+    { href: `${base}/settings/billing`, label: t('nav.billing') },
   ];
 
   return (
@@ -74,7 +81,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ul>
           {links.map((link) => (
             <li key={link.href}>
-              <Link href={link.href} aria-current={pathname === link.href ? 'page' : undefined}>
+              <Link
+                href={link.href}
+                aria-current={isCurrent(pathname, link.href, base) ? 'page' : undefined}
+              >
                 {link.label}
               </Link>
             </li>

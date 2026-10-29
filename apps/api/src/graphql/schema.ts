@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import type { GraphQLSchema } from 'graphql';
+import { billingResolvers } from '../features/billing/billing.resolvers.ts';
 import { customersResolvers } from '../features/customers/customers.resolvers.ts';
 import { identityResolvers } from '../features/identity/identity.resolvers.ts';
 import { invoicesResolvers } from '../features/invoices/invoices.resolvers.ts';
@@ -33,6 +34,7 @@ export function buildTenantSchema(): GraphQLSchema {
       organizationsResolvers,
       customersResolvers,
       invoicesResolvers,
+      billingResolvers,
     ],
     // Fail at boot if a resolver names a field the schema does not have.
     resolverValidationOptions: { requireResolversToMatchSchema: 'error' },

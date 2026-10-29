@@ -34,6 +34,7 @@ const config: CodegenConfig = {
           InvoiceLine: '@ledgerly/domain#LineItem',
           Payment: '../../features/invoices/payment.model.ts#PaymentRecord',
           Money: '@ledgerly/domain#Money as DomainMoney',
+          Plan: '@ledgerly/domain#Plan as DomainPlan',
           CurrencyTotals: '../../features/invoices/dashboard.types.ts#CurrencyTotalsParent',
         },
       },

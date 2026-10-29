@@ -13,8 +13,9 @@ A multi-tenant invoicing SaaS built in phases as a production-grade learning pro
 | 0 Plan                           | done                                    |
 | 1 Foundation                     | done                                    |
 | 2 API, data, auth, observability | done                                    |
-| 3 Web shell                      | in review                               |
-| 4–8                              | planned (5 = admin console, revision 3) |
+| 3 Web shell                      | done                                    |
+| 4 Core features                  | in review                               |
+| 5–8                              | planned (5 = admin console, revision 3) |
 
 ## Getting started
 
@@ -38,5 +39,12 @@ make e2e        # Playwright against a fresh database (stop `make api`/`make web
 
 ## Simulations
 
-Deliberate stand-ins, named `*Simulator`, arrive in Phase 4: `PaymentGatewaySimulator` and
-`BillingGatewaySimulator`. None exist yet.
+Deliberate stand-ins, named `*Simulator`:
+
+- **`PaymentGatewaySimulator`** (`apps/api/src/features/payments/`) stands in for a card
+  processor behind the `PaymentGateway` port. It charges invoice payments (`payInvoiceByCard`)
+  and plan upgrades (`changePlan`). No real card data exists anywhere: the payment method is a
+  test token. `pm_card_visa` and `pm_card_mastercard` succeed; `pm_card_declined` and
+  `pm_card_insufficient_funds` are declined. Charges are idempotent per key (a different request
+  under the same key is refused, as a real gateway would), can be refunded, and are kept in the
+  global `simulatedcharges` collection so tests can see exactly what was charged.

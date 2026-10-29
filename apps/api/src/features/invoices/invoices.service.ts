@@ -14,6 +14,7 @@ import {
   type LineItem,
 } from '@ledgerly/domain';
 import {
+  CardPaymentInput,
   CreateInvoiceInput,
   InvoiceLines,
   parseInput,
@@ -24,7 +25,10 @@ import type { Clock } from '../../clock.ts';
 import { inTransaction } from '../../data/connection.ts';
 import { objectId } from '../../graphql/ids.ts';
 import { Customer } from '../customers/customer.model.ts';
-import type { Outcome } from '../idempotency/idempotency.ts';
+import type { Deps } from '../../deps.ts';
+import { checkCapacity } from '../billing/limits.ts';
+import { idempotent, storedOutcome, type Outcome } from '../idempotency/idempotency.ts';
+import { declineMessage, gatewayKey } from '../payments/gateway.ts';
 import { enqueueEmail } from '../outbox/outbox.ts';
 import { nextSequence } from './counter.model.ts';
 import { fromDomain, toDomain } from './invoice.mapper.ts';
@@ -87,7 +91,8 @@ async function persist(
   return { ok: true, id: id.toString() };
 }
 
-export async function createInvoice(rawInput: unknown): Promise<Outcome> {
+/** Call inside `idempotent()`, which supplies the transaction (the plan limit needs it). */
+export async function createInvoice(rawInput: unknown, clock: Clock): Promise<Outcome> {
   const parsed = parseInput(CreateInvoiceInput, rawInput);
   if (!parsed.ok) return refused(parsed.userErrors);
   const input = parsed.value;
@@ -104,6 +109,8 @@ export async function createInvoice(rawInput: unknown): Promise<Outcome> {
 
   const result = replaceDomainLines(createDraft(currency(input.currency)), items.lines);
   if (!result.ok) return refused(domainError(result.error, ['input', 'lines']));
+  const overLimit = await checkCapacity('invoicesPerMonth', clock);
+  if (overLimit) return refused([overLimit]);
   const [invoice] = await Invoice.create([
     { customerId, currency: input.currency, dueDate: input.dueDate, ...fromDomain(result.value) },
   ]);
@@ -154,8 +161,15 @@ export async function sendInvoice(
   return persist(_id, result, ['id'], { number, sentAt: now });
 }
 
-/** Call inside `idempotent()`, which supplies the transaction. */
-export async function recordPayment(rawInput: unknown, recordedBy: string): Promise<Outcome> {
+/**
+ * Call inside `idempotent()`, which supplies the transaction. `card` is set when the money was
+ * already taken by the gateway (payInvoiceByCard).
+ */
+export async function recordPayment(
+  rawInput: unknown,
+  recordedBy: string,
+  card?: { readonly chargeId: string },
+): Promise<Outcome> {
   const parsed = parseInput(RecordPaymentInput, rawInput);
   if (!parsed.ok) return refused(parsed.userErrors);
   const { invoiceId, amount } = parsed.value;
@@ -184,9 +198,84 @@ export async function recordPayment(rawInput: unknown, recordedBy: string): Prom
       amountMinor: payment.amountMinor,
       currency: payment.currency.code,
       recordedBy: new Types.ObjectId(recordedBy),
+      method: card ? 'CARD' : 'MANUAL',
+      reference: card?.chargeId ?? null,
     },
   ]);
   return persist(_id, result, ['input', 'amount']);
+}
+
+/**
+ * Takes a card payment for an invoice: charge first, then record. The charge is an external side
+ * effect, so it happens outside any database transaction (a transaction may be retried; a charge
+ * must not be), with the gateway's own idempotency key derived from ours. If recording then fails
+ * — another payment settled the balance between our check and our write — the charge is
+ * refunded: a compensating action, because there is no transaction spanning us and the gateway.
+ */
+export async function payInvoiceByCard(
+  deps: Deps,
+  caller: { userId: string; orgId: string },
+  rawInput: unknown,
+  key: string,
+): Promise<Outcome> {
+  const replay = await storedOutcome('payInvoiceByCard', key, caller.userId, rawInput);
+  if (replay) return replay;
+
+  const parsed = parseInput(CardPaymentInput, rawInput);
+  if (!parsed.ok) return refused(parsed.userErrors);
+  const { invoiceId, amount, paymentMethod } = parsed.value;
+  const _id = objectId(invoiceId);
+  const record = _id ? await Invoice.findById(_id).lean().exec() : null;
+  if (!record) return notFound(['input', 'invoiceId']);
+
+  // Check before charging: never take money for a payment the domain would refuse anyway.
+  let payment: Money;
+  try {
+    payment = Money.parse(amount.amount, currency(amount.currency));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return refused([{ code: 'INVALID_AMOUNT', message, field: ['input', 'amount', 'amount'] }]);
+  }
+  const check = recordDomainPayment(toDomain(record), payment);
+  if (!check.ok) return refused(domainError(check.error, ['input', 'amount']));
+
+  const charge = await deps.paymentGateway.charge({
+    amount: payment,
+    paymentMethod,
+    idempotencyKey: gatewayKey(
+      `invoice-payment:${caller.orgId}`,
+      key,
+      record._id.toString(),
+      payment.toString(),
+      paymentMethod,
+    ),
+    description: `Invoice ${record.number ?? record._id.toString()}`,
+  });
+  if (charge.status === 'declined') {
+    return refused([
+      {
+        code: 'CARD_DECLINED',
+        message: declineMessage(charge.reason),
+        field: ['input', 'paymentMethod'],
+      },
+    ]);
+  }
+
+  const outcome = await idempotent('payInvoiceByCard', key, caller.userId, rawInput, () =>
+    recordPayment(rawInput, caller.userId, { chargeId: charge.chargeId }),
+  );
+  if (!outcome.ok) {
+    await deps.paymentGateway.refund(charge.chargeId);
+    return refused([
+      ...outcome.userErrors,
+      {
+        code: 'PAYMENT_REFUNDED',
+        message: 'The card was charged and immediately refunded.',
+        field: [],
+      },
+    ]);
+  }
+  return outcome;
 }
 
 export async function voidInvoice(id: string): Promise<Outcome> {

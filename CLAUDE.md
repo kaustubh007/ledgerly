@@ -37,6 +37,11 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - Web: client components never fetch during SSR; first-render data comes from Server Components
   (`query`, or `<PreloadQuery>` + `useReadQuery`). Switching organisation is a full page load.
 - Web: the Redux store is created per request (`StoreProvider`), never at module level.
+- Web: `'use client'` modules export only components; shared values live in `constants.ts`
+  (`test/client-boundary.test.ts` enforces it).
+- External side effects (the payment gateway) never run inside a database transaction. They
+  run after the replay check, with `gatewayKey`, and are compensated (refund) if recording fails.
+- Plan limits are checked with `checkCapacity` inside the transaction that creates the resource.
 - Never commit a red build. Never leave a TODO in a completed phase.
 
 ## Style

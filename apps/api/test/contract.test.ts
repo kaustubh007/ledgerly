@@ -6,6 +6,8 @@ import {
 } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import {
+  CardPaymentInput,
+  ChangePlanInput,
   CreateInvoiceInput,
   CustomerInput,
   InvoiceLineInput,
@@ -33,6 +35,8 @@ const PAIRS: Record<string, z.ZodObject> = {
   CreateInvoiceInput,
   MoneyInput,
   RecordPaymentInput,
+  CardPaymentInput,
+  ChangePlanInput,
 };
 
 function graphqlShape(type: GraphQLInputObjectType) {

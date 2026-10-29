@@ -1,6 +1,8 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
-import { CUSTOMER_PAGE_SIZE, CustomerList } from '@web/features/customers/CustomerList';
+import { CUSTOMER_PAGE_SIZE } from '@web/features/customers/constants';
+import { CustomerList } from '@web/features/customers/CustomerList';
+import { NewCustomer } from '@web/features/customers/NewCustomer';
 import { CustomersQuery } from '@web/graphql/documents';
 import { forOrg, PreloadQuery } from '@web/lib/apollo/rsc';
 
@@ -10,6 +12,7 @@ export default async function CustomersPage({ params }: { params: Promise<{ orgS
   return (
     <>
       <h1>{t('title')}</h1>
+      <NewCustomer />
       {/* The server fetches with the user's cookie and streams the result to the browser; the
           client component reads it through the queryRef, during SSR and after hydration. */}
       <PreloadQuery
@@ -19,7 +22,7 @@ export default async function CustomersPage({ params }: { params: Promise<{ orgS
       >
         {(queryRef) => (
           <Suspense>
-            <CustomerList queryRef={queryRef} />
+            <CustomerList orgSlug={orgSlug} queryRef={queryRef} />
           </Suspense>
         )}
       </PreloadQuery>

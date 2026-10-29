@@ -1,4 +1,10 @@
-import { isRole, isSupportedCurrency, type Role } from '@ledgerly/domain';
+import {
+  isPlanCode,
+  isRole,
+  isSupportedCurrency,
+  type PlanCode,
+  type Role,
+} from '@ledgerly/domain';
 import { z } from 'zod';
 
 // Field-level rules only: shape is the GraphQL schema's job, business rules are the domain's.
@@ -89,7 +95,23 @@ export const MoneyInput = z.object({ amount: decimalAmount, currency: currencyCo
 
 export const RecordPaymentInput = z.object({ invoiceId: z.string().min(1), amount: MoneyInput });
 
+export const CardPaymentInput = z.object({
+  invoiceId: z.string().min(1),
+  amount: MoneyInput,
+  paymentMethod: z.string().trim().min(1).max(100),
+});
+
 export const InviteMemberInput = z.object({ email, role });
+
+export const planCode = z.string().refine((value): value is PlanCode => isPlanCode(value), {
+  message: 'Unknown plan',
+  params: { code: 'INVALID_PLAN' },
+});
+
+export const ChangePlanInput = z.object({
+  plan: planCode,
+  paymentMethod: z.string().trim().min(1).max(100).nullish(),
+});
 
 export const OrganizationName = trimmed(2, 80);
 

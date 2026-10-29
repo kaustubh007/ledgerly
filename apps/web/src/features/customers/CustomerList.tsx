@@ -8,9 +8,8 @@ import type {
   CustomersQuery as CustomersQueryResult,
   CustomersQueryVariables,
 } from '@web/graphql/__generated__/graphql';
+import { Link } from '@web/i18n/navigation';
 import styles from '@web/features/shell/AppShell.module.scss';
-
-export const CUSTOMER_PAGE_SIZE = 20;
 
 /**
  * A client component reading a query the Server Component started (<PreloadQuery>), through the
@@ -19,8 +18,10 @@ export const CUSTOMER_PAGE_SIZE = 20;
  * fetch from the browser. "Load more" then fetches further pages from the browser.
  */
 export function CustomerList({
+  orgSlug,
   queryRef,
 }: {
+  orgSlug: string;
   queryRef: QueryRef<CustomersQueryResult, CustomersQueryVariables>;
 }) {
   const t = useTranslations('customers');
@@ -58,7 +59,9 @@ export function CustomerList({
         <tbody>
           {edges.map(({ node }) => (
             <tr key={node.id}>
-              <td>{node.name}</td>
+              <td>
+                <Link href={`/o/${orgSlug}/customers/${node.id}`}>{node.name}</Link>
+              </td>
               <td>{node.email ?? '—'}</td>
               <td>{node.defaultCurrency}</td>
             </tr>

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { buildSchema } from 'graphql';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { SimulatedCharge } from '../src/features/payments/payment-gateway.simulator.ts';
 import { loadTypeDefs } from '../src/graphql/schema.ts';
 import { CREATE_INVOICE, customer, PAY, SEND, sentInvoice } from './fixtures.ts';
 import { lastEmail, signUpUser, startTestApp, type SignedUp, type TestApp } from './harness.ts';
@@ -19,6 +20,7 @@ const B_CUSTOMER_NAME = 'Beta Customer';
 /** Fields that are not tenant data: identity and session management, scoped to the user. */
 const NOT_TENANT_SCOPED = new Set([
   'Query.viewer',
+  'Query.plans', // the plan catalogue: the same for everyone
   'Mutation.signUp',
   'Mutation.logIn',
   'Mutation.verifyEmail',
@@ -82,7 +84,7 @@ afterAll(() => app.close());
 /** B's data as B sees it: compared before and after A's attempts. */
 async function snapshotOfB(): Promise<unknown> {
   return b.client.ok(`query {
-    organization { members { userId role } invitations { email role } }
+    organization { plan { code } usage { customers invoicesThisMonth seats } members { userId role } invitations { email role } }
     customers { edges { node { id name email } } }
     invoices { edges { node { id number status lines { description } total { amount } paid { amount } payments { id } } } }
     dashboard { totals { currency outstanding { amount } overdue { amount } } countsByStatus { status count } }
@@ -100,11 +102,13 @@ describe('tenant isolation', () => {
     const r = await a.client.ok<any>(`query {
       customers { edges { node { name } } }
       search: customers(search: "beta") { edges { node { name } } }
+      byForeignCustomer: invoices(customerId: "${B.customer}") { edges { node { id } } }
       invoices { edges { node { currency customer { name } } } }
       organization { name members { email } invitations { email } }
     }`);
     expect(r.customers.edges.map((e: any) => e.node.name)).not.toContain(B_CUSTOMER_NAME);
     expect(r.search.edges).toEqual([]);
+    expect(r.byForeignCustomer.edges).toEqual([]);
     expect(r.invoices.edges.every((e: any) => e.node.currency === 'USD')).toBe(true);
     expect(r.organization.members.map((m: any) => m.email)).toEqual([a.email]);
     expect(r.organization.invitations).toEqual([]);
@@ -141,6 +145,7 @@ describe('tenant isolation', () => {
       'Mutation.voidInvoice',
       'Mutation.changeMemberRole',
       'Mutation.removeMember',
+      'Mutation.payInvoiceByCard',
     );
     const line = { description: 'pwned', quantity: '1', unitPrice: '1' };
     const attempts: [string, Record<string, unknown>][] = [
@@ -172,6 +177,17 @@ describe('tenant isolation', () => {
         { id: B.invoice },
       ],
       [
+        `mutation ($i: CardPaymentInput!, $k: ID!) { r: payInvoiceByCard(input: $i, idempotencyKey: $k) { userErrors { code } } }`,
+        {
+          k: randomUUID(),
+          i: {
+            invoiceId: B.invoice,
+            amount: { amount: '1', currency: 'EUR' },
+            paymentMethod: 'pm_card_visa',
+          },
+        },
+      ],
+      [
         `mutation ($u: ID!) { r: changeMemberRole(userId: $u, role: OWNER) { userErrors { code } } }`,
         { u: B.member },
       ],
@@ -187,6 +203,19 @@ describe('tenant isolation', () => {
         mutation.slice(0, 60),
       ).toEqual(['NOT_FOUND']);
     }
+  });
+
+  it('changes only the selected organisation’s plan, and never charges for a foreign invoice', async () => {
+    cover('Mutation.changePlan');
+    const r = await a.client.ok<any>(
+      `mutation ($k: ID!) { changePlan(input: { plan: PRO, paymentMethod: "pm_card_visa" }, idempotencyKey: $k) { organization { slug plan { code } } } }`,
+      { k: randomUUID() },
+    );
+    expect(r.changePlan.organization).toEqual({ slug: a.orgSlug, plan: { code: 'PRO' } });
+    // The payInvoiceByCard attempt on B's invoice above must not have reached the gateway.
+    expect(
+      await SimulatedCharge.countDocuments({ amountMinor: 100n, currency: 'EUR' }).exec(),
+    ).toBe(0);
   });
 
   it('creates only in the selected organisation', async () => {
@@ -208,6 +237,7 @@ describe('tenant isolation', () => {
       'query { invoices { edges { node { id } } } }',
       `query { invoice(id: "${B.invoice}") { id } }`,
       'query { dashboard { totals { currency } } }',
+      'mutation { changePlan(input: { plan: BUSINESS, paymentMethod: "pm_card_visa" }, idempotencyKey: "x") { userErrors { code } } }',
     ];
     for (const query of fields) {
       const r = await intruder.gql(query, {}, { 'x-org': b.orgSlug });

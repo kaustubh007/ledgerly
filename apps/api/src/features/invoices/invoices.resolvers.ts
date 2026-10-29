@@ -17,6 +17,7 @@ import { balanceOf, linesOf } from './invoice.mapper.ts';
 import { Invoice } from './invoice.model.ts';
 import {
   createInvoice,
+  payInvoiceByCard,
   recordPayment,
   replaceLines,
   sendInvoice,
@@ -35,12 +36,16 @@ async function orgTimeZone(orgId: string): Promise<string> {
 
 export const invoicesResolvers: Resolvers = {
   Query: {
-    invoices: async (_, { first, after, status }) => {
+    invoices: async (_, { first, after, status, customerId }) => {
       requireTenant('books:read');
       const size = pageSize(first);
       const cursor = after ? decodeCursor(after) : undefined;
+      // A malformed or foreign customer id simply matches nothing (tenant guard).
+      const customer = customerId ? objectId(customerId) : undefined;
+      if (customerId && !customer) return toConnection([], size);
       const rows = await Invoice.find({
         ...(status ? { status } : {}),
+        ...(customer ? { customerId: customer } : {}),
         ...(cursor ? afterCursor(cursor) : {}),
       })
         .sort(NEWEST_FIRST)
@@ -67,11 +72,11 @@ export const invoicesResolvers: Resolvers = {
     },
   },
   Mutation: {
-    createInvoice: async (_, { input, idempotencyKey }) => {
+    createInvoice: async (_, { input, idempotencyKey }, ctx) => {
       const { userId } = requireTenant('invoices:write');
       return toPayload(
         await idempotent('createInvoice', idempotencyKey, userId, input, () =>
-          createInvoice(input),
+          createInvoice(input, ctx.deps.clock),
         ),
       );
     },
@@ -94,6 +99,10 @@ export const invoicesResolvers: Resolvers = {
           recordPayment(input, userId),
         ),
       );
+    },
+    payInvoiceByCard: async (_, { input, idempotencyKey }, ctx) => {
+      const caller = requireTenant('payments:record');
+      return toPayload(await payInvoiceByCard(ctx.deps, caller, input, idempotencyKey));
     },
     voidInvoice: async (_, { id }) => {
       requireTenant('invoices:write');
@@ -127,6 +136,8 @@ export const invoicesResolvers: Resolvers = {
   Payment: {
     id: (p) => p._id.toString(),
     amount: (p) => money(p.amountMinor, p.currency),
+    method: (p) => p.method,
+    reference: (p) => p.reference ?? null,
     recordedAt: (p) => p.createdAt,
   },
   CurrencyTotals: {
