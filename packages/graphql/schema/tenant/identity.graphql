@@ -1,0 +1,79 @@
+enum Role {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  VIEWER
+}
+
+type Viewer {
+  id: ID!
+  email: String!
+  name: String!
+  emailVerified: Boolean!
+  memberships: [Membership!]!
+  sessions: [Session!]!
+}
+
+type Membership {
+  organization: OrganizationSummary!
+  role: Role!
+}
+
+type OrganizationSummary {
+  id: ID!
+  slug: String!
+  name: String!
+}
+
+type Session {
+  id: ID!
+  current: Boolean!
+  userAgent: String
+  createdAt: DateTime!
+  lastUsedAt: DateTime!
+}
+
+type AuthPayload {
+  viewer: Viewer
+  userErrors: [UserError!]!
+}
+
+type OkPayload {
+  ok: Boolean!
+  userErrors: [UserError!]!
+}
+
+input SignUpInput {
+  email: String!
+  password: String!
+  name: String!
+  organizationName: String!
+}
+
+input LogInInput {
+  email: String!
+  password: String!
+}
+
+input ResetPasswordInput {
+  token: String!
+  password: String!
+}
+
+extend type Query {
+  "The signed-in user, or null."
+  viewer: Viewer
+}
+
+extend type Mutation {
+  "Creates a user, their first organisation (as OWNER) and a session."
+  signUp(input: SignUpInput!): AuthPayload!
+  logIn(input: LogInInput!): AuthPayload!
+  verifyEmail(token: String!): OkPayload!
+  "Always succeeds, whether or not the email exists."
+  requestPasswordReset(email: String!): OkPayload!
+  "Sets a new password and revokes every session of the user."
+  resetPassword(input: ResetPasswordInput!): OkPayload!
+  revokeSession(id: ID!): OkPayload!
+  revokeOtherSessions: OkPayload!
+}

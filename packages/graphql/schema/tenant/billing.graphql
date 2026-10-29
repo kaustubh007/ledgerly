@@ -1,0 +1,62 @@
+enum PlanCode {
+  FREE
+  PRO
+  BUSINESS
+}
+
+type Plan {
+  code: PlanCode!
+  monthlyPrice: Money!
+  limits: PlanLimits!
+  features: PlanFeatures!
+}
+
+"Null means unlimited."
+type PlanLimits {
+  customers: Int
+  invoicesPerMonth: Int
+  "Members plus open invitations."
+  seats: Int
+}
+
+type PlanFeatures {
+  customBranding: Boolean!
+  mfaEnforcement: Boolean!
+  auditExport: Boolean!
+}
+
+type Usage {
+  customers: Int!
+  "Invoices created this calendar month (UTC)."
+  invoicesThisMonth: Int!
+  seats: Int!
+}
+
+extend type Organization {
+  plan: Plan!
+  usage: Usage!
+}
+
+input ChangePlanInput {
+  plan: PlanCode!
+  """
+  Required when the change costs money (an upgrade). The payment gateway is simulated; use
+  `pm_card_visa` (approved) or `pm_card_declined` (declined). See README "Simulations".
+  """
+  paymentMethod: String
+}
+
+type ChangePlanPayload {
+  organization: Organization
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  "The plan catalogue. Not tenant data."
+  plans: [Plan!]!
+}
+
+extend type Mutation {
+  "Requires `organization:manage` (OWNER). Upgrades are charged through the payment gateway."
+  changePlan(input: ChangePlanInput!, idempotencyKey: ID!): ChangePlanPayload!
+}

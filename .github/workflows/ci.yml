@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  check:
+    name: Format, lint, typecheck, test, architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generated GraphQL types are up to date
+        run: |
+          pnpm --filter @ledgerly/api codegen:check
+          pnpm --filter @ledgerly/web codegen:check
+      # API tests start a real MongoDB replica set with Testcontainers (Docker is on the runner).
+      - run: pnpm check
+      - run: pnpm build
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: packages/*/coverage
+          if-no-files-found: ignore
+
+  local-stack:
+    name: Local stack and API observability smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: make up
+      - run: make smoke
+      - name: Start the built API with tracing on
+        run: |
+          pnpm build
+          make env
+          cd apps/api
+          node --env-file=../../.env --import ./dist/instrumentation.js dist/main.js > ../../api.log 2>&1 &
+          for _ in $(seq 1 30); do curl -fs localhost:4000/healthz && break; sleep 1; done
+      - run: API_LOG=api.log ./scripts/smoke-api.sh
+      - if: failure()
+        run: |
+          cat api.log || true
+          docker compose logs --no-color
+      - if: always()
+        run: make down
+
+  e2e:
+    name: End-to-end (Playwright, real API and web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: make up
+      - run: make env
+      - run: pnpm build
+      - name: Install the Chromium that matches the pinned Playwright
+        run: pnpm --filter @ledgerly/web exec playwright install --with-deps chromium
+      # Playwright starts the built API and `next start` itself (apps/web/playwright.config.ts).
+      - run: pnpm --filter @ledgerly/web e2e
+        env:
+          CI: 'true'
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+      - if: always()
+        run: make down
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4

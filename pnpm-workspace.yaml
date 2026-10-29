@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+
+# A peer-dependency violation fails the install instead of printing a warning.
+# This is what turns "typescript@latest" into a red Renovate PR instead of a broken lint run.
+strictPeerDependencies: true
+engineStrict: true
+# pnpm 12 blocks dependency install scripts unless listed. None of these is needed: two print
+# protobuf notices, two are optional native SSH helpers that Testcontainers can do without,
+# @parcel/watcher only serves `sass --watch`, and @swc/core is an optional codegen transpiler.
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': false
+  '@apollo/protobufjs': false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

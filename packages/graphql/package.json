@@ -1,0 +1,13 @@
+{
+  "name": "@ledgerly/graphql",
+  "version": "0.0.0",
+  "private": true,
+  "description": "GraphQL SDL, the single source of truth for API shape. Consumers run their own codegen.",
+  "type": "module",
+  "exports": {
+    "./schema/*": "./schema/*"
+  },
+  "files": [
+    "schema"
+  ]
+}

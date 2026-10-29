@@ -1,0 +1,112 @@
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+type Invoice {
+  id: ID!
+  "Allocated when the invoice is sent; null for drafts."
+  number: String
+  status: InvoiceStatus!
+  customer: Customer!
+  currency: String!
+  dueDate: Date!
+  lines: [InvoiceLine!]!
+  total: Money!
+  paid: Money!
+  balance: Money!
+  overdue: Boolean!
+  payments: [Payment!]!
+  sentAt: DateTime
+  createdAt: DateTime!
+}
+
+type InvoiceLine {
+  description: String!
+  "Decimal string with up to three places, e.g. `\"1.5\"`."
+  quantity: String!
+  unitPrice: Money!
+  total: Money!
+}
+
+enum PaymentMethod {
+  MANUAL
+  CARD
+}
+
+type Payment {
+  id: ID!
+  amount: Money!
+  method: PaymentMethod!
+  "The gateway's charge id for card payments."
+  reference: String
+  recordedAt: DateTime!
+}
+
+type InvoiceEdge {
+  cursor: String!
+  node: Invoice!
+}
+
+type InvoiceConnection {
+  edges: [InvoiceEdge!]!
+  pageInfo: PageInfo!
+}
+
+input InvoiceLineInput {
+  description: String!
+  quantity: String!
+  "In the invoice currency."
+  unitPrice: String!
+}
+
+input CreateInvoiceInput {
+  customerId: ID!
+  currency: String!
+  dueDate: Date!
+  lines: [InvoiceLineInput!]!
+}
+
+input RecordPaymentInput {
+  invoiceId: ID!
+  amount: MoneyInput!
+}
+
+input CardPaymentInput {
+  invoiceId: ID!
+  amount: MoneyInput!
+  "A payment method token from the (simulated) gateway, e.g. `pm_card_visa`."
+  paymentMethod: String!
+}
+
+type InvoicePayload {
+  invoice: Invoice
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  invoices(
+    first: Int = 20
+    after: String
+    status: InvoiceStatus
+    customerId: ID
+  ): InvoiceConnection!
+  invoice(id: ID!): Invoice
+}
+
+extend type Mutation {
+  createInvoice(input: CreateInvoiceInput!, idempotencyKey: ID!): InvoicePayload!
+  replaceInvoiceLines(id: ID!, lines: [InvoiceLineInput!]!): InvoicePayload!
+  "Allocates the invoice number and emails the customer."
+  sendInvoice(id: ID!, idempotencyKey: ID!): InvoicePayload!
+  recordPayment(input: RecordPaymentInput!, idempotencyKey: ID!): InvoicePayload!
+  """
+  Charges the card through the payment gateway, then records the payment. If the payment can no
+  longer be recorded (another payment settled the balance meanwhile), the charge is refunded.
+  """
+  payInvoiceByCard(input: CardPaymentInput!, idempotencyKey: ID!): InvoicePayload!
+  voidInvoice(id: ID!): InvoicePayload!
+}

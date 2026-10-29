@@ -1,0 +1,17 @@
+pnpm-lock.yaml
+coverage
+dist
+.turbo
+
+# Accepted ADRs are immutable (superseded, never edited), including whitespace.
+docs/adr
+
+# Generated; checked for freshness by `codegen:check`, so it must stay byte-for-byte as generated.
+**/__generated__
+
+# Next.js and Playwright output
+.next
+next-env.d.ts
+playwright-report
+test-results
+.e2e-logs

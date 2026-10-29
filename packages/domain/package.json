@@ -1,0 +1,33 @@
+{
+  "name": "@ledgerly/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure domain model: Money, invoices. Zero runtime dependencies.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@ledgerly/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@ledgerly/config": "workspace:*",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "fast-check": "4.10.2",
+    "typescript": "~6.0.3",
+    "vitest": "5.0.5"
+  }
+}

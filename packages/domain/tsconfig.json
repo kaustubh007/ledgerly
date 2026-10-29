@@ -1,0 +1,11 @@
+{
+  "extends": "@ledgerly/config/tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "isolatedDeclarations": false,
+    "noEmit": true
+  },
+  "include": ["src"]
+}

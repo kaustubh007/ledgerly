@@ -1,0 +1,12 @@
+{
+  "extends": "@ledgerly/config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "isolatedDeclarations": false
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [{ "path": "../domain/tsconfig.build.json" }]
+}

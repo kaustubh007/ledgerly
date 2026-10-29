@@ -1,0 +1,34 @@
+{
+  "extends": "@ledgerly/config/tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    // Next.js bundles the app, so imports are extensionless and resolved the bundler way.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "plugins": [{ "name": "next" }],
+    "noEmit": true,
+    "incremental": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "isolatedDeclarations": false,
+    "rewriteRelativeImportExtensions": false,
+    // Workspace packages are type-checked from source (customConditions), and their sources use
+    // .ts import extensions. Next never emits with tsc, so this is safe.
+    "allowImportingTsExtensions": true,
+    "allowJs": false,
+    "paths": { "@web/*": ["./src/*"] }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "e2e",
+    "*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

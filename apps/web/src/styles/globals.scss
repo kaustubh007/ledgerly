@@ -1,0 +1,96 @@
+// Minimal tokens for Phase 3. Phase 7 replaces this with the full SCSS token system (PLAN §3.12).
+// Logical properties only (margin-inline, padding-block, inset-inline-start…) so Arabic RTL works
+// without a second stylesheet.
+
+:root {
+  color-scheme: light dark;
+  --color-bg: #ffffff;
+  --color-surface: #f5f6f8;
+  --color-text: #1b1f24;
+  --color-muted: #59636e;
+  --color-border: #d0d7de;
+  --color-accent: #0b57d0;
+  --color-on-accent: #ffffff;
+  --color-danger: #b3261e;
+  --color-focus: #0b57d0;
+  --radius: 6px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Arabic', sans-serif;
+}
+
+@mixin dark {
+  --color-bg: #0f1419;
+  --color-surface: #1a2129;
+  --color-text: #e6edf3;
+  --color-muted: #9aa5b1;
+  --color-border: #3a434d;
+  --color-accent: #8ab4f8;
+  --color-on-accent: #0f1419;
+  --color-danger: #f2b8b5;
+  --color-focus: #8ab4f8;
+}
+
+:root[data-theme='dark'] {
+  @include dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: var(--space-2);
+  inset-block-start: -10rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  z-index: 10;
+
+  &:focus {
+    inset-block-start: var(--space-2);
+  }
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

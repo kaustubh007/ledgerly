@@ -1,0 +1,238 @@
+{
+  "meta": {
+    "title": "Ledgerly",
+    "description": "Invoicing for small teams"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "mainNavigation": "Main navigation"
+  },
+  "auth": {
+    "signInTitle": "Sign in",
+    "signUpTitle": "Create your account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Your name",
+    "organizationName": "Organisation name",
+    "signInSubmit": "Sign in",
+    "signUpSubmit": "Create account",
+    "submitting": "Please wait…",
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "goToSignUp": "Create one",
+    "goToSignIn": "Sign in",
+    "restoring": "Restoring your session…"
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Email or password is incorrect.",
+    "EMAIL_TAKEN": "An account with this email already exists.",
+    "RATE_LIMITED": "Too many attempts. Try again later.",
+    "INVALID_EMAIL": "Enter a valid email address.",
+    "TOO_SMALL": "This is too short.",
+    "TOO_BIG": "This is too long.",
+    "generic": "Something went wrong. Please try again.",
+    "PLAN_LIMIT_REACHED": "Your plan’s limit is reached.",
+    "OVERPAYMENT": "The amount is more than the balance due.",
+    "CURRENCY_MISMATCH": "The amount must be in the invoice currency.",
+    "NON_POSITIVE_AMOUNT": "The amount must be greater than zero.",
+    "INVALID_AMOUNT": "Enter an amount such as 12.30, with no more decimals than the currency allows.",
+    "INVALID_QUANTITY": "Enter a quantity with at most three decimals.",
+    "INVALID_DATE": "Enter a valid date.",
+    "INVALID_LOCALE": "Choose a valid language.",
+    "UNSUPPORTED_CURRENCY": "This currency is not supported.",
+    "CARD_DECLINED": "The card was declined.",
+    "PAYMENT_REFUNDED": "The card was charged and immediately refunded.",
+    "PAYMENT_METHOD_REQUIRED": "Choose a card.",
+    "INVALID_TRANSITION": "This invoice cannot do that in its current status.",
+    "EMPTY_INVOICE": "An invoice needs a positive total before it can be sent.",
+    "NEGATIVE_UNIT_PRICE": "Unit prices cannot be negative.",
+    "NOT_FOUND": "It no longer exists.",
+    "PLAN_UNCHANGED": "That is already your plan.",
+    "IDEMPOTENCY_KEY_REUSED": "This form was already used for a different request. Reload the page.",
+    "INVALID_PLAN": "Choose a plan."
+  },
+  "shell": {
+    "organization": "Organisation",
+    "switchOrganization": "Switch organisation",
+    "currentOrganization": "current",
+    "account": "Account",
+    "signOut": "Sign out",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "dismiss": "Dismiss",
+    "notifications": "Notifications"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "invoices": "Invoices",
+    "billing": "Billing"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "ACCOUNTANT": "Accountant",
+    "VIEWER": "Viewer"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "outstanding": "Outstanding",
+    "overdue": "Overdue",
+    "currency": "Currency",
+    "totalsCaption": "Open balances by currency",
+    "empty": "No open invoices yet.",
+    "invoiceCount": "{count, plural, =0 {No invoices} one {# invoice} other {# invoices}}"
+  },
+  "customers": {
+    "title": "Customers",
+    "name": "Name",
+    "email": "Email",
+    "currency": "Currency",
+    "empty": "No customers yet.",
+    "loadMore": "Load more",
+    "add": "Add customer",
+    "create": "Create customer",
+    "created": "Customer {name} created.",
+    "updated": "Customer {name} saved.",
+    "documentLocale": "Document language",
+    "documentLocaleHint": "Invoices and emails to this customer use this language.",
+    "billingAddress": "Billing address",
+    "edit": "Edit customer",
+    "invoicesOf": "Invoices for {name}"
+  },
+  "orgPicker": {
+    "title": "Your organisations",
+    "none": "You are not a member of any organisation yet."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Go to your organisations"
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "new": "New invoice",
+    "filters": "Filter invoices",
+    "statusFilter": "Status",
+    "customerFilter": "Customer",
+    "all": "All",
+    "empty": "No invoices match.",
+    "loadMore": "Load more",
+    "number": "Number",
+    "customer": "Customer",
+    "statusColumn": "Status",
+    "dueDate": "Due date",
+    "total": "Total",
+    "paid": "Paid",
+    "balance": "Balance due",
+    "draft": "Draft",
+    "currency": "Currency",
+    "lines": "Lines",
+    "lineN": "Line {n}",
+    "description": "Description",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "descriptionN": "Description, line {n}",
+    "quantityN": "Quantity, line {n}",
+    "unitPriceN": "Unit price, line {n}",
+    "lineTotalN": "Total, line {n}",
+    "moveUpN": "Move line {n} up",
+    "moveDownN": "Move line {n} down",
+    "removeN": "Remove line {n}",
+    "addLine": "Add line",
+    "createDraft": "Create draft",
+    "createdDraft": "Draft invoice created.",
+    "needCustomer": "Invoices are for customers.",
+    "addCustomerFirst": "Add a customer first.",
+    "invoiceTitle": "Invoice {number}",
+    "notFound": "Invoice not found",
+    "send": "Send invoice",
+    "sending": "Sending…",
+    "sent": "Invoice {number} sent.",
+    "void": "Void",
+    "confirmVoid": "Yes, void this invoice",
+    "cancel": "Cancel",
+    "voided": "Invoice voided.",
+    "payments": "Payments",
+    "noPayments": "No payments yet.",
+    "recordedAt": "Recorded",
+    "method": "Method",
+    "amountColumn": "Amount",
+    "pendingPayment": "Recording…",
+    "recordPayment": "Record a payment",
+    "recording": "Recording…",
+    "payByCard": "Pay by card",
+    "charging": "Charging…",
+    "amount": "Amount ({currency})",
+    "paymentRecorded": "Payment of {amount} recorded.",
+    "testCard": "Test card",
+    "testCardHint": "Payments go through a simulated gateway; no money moves.",
+    "methods": {
+      "MANUAL": "Manual",
+      "CARD": "Card"
+    },
+    "cards": {
+      "pm_card_visa": "Visa (approves)",
+      "pm_card_mastercard": "Mastercard (approves)",
+      "pm_card_declined": "Declined card",
+      "pm_card_insufficient_funds": "Insufficient funds"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PARTIALLY_PAID": "Partly paid",
+      "PAID": "Paid",
+      "VOID": "Void",
+      "OVERDUE": "Overdue"
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "currentPlan": "Your plan: {plan}",
+    "plansTitle": "Plans",
+    "perMonth": "{price} a month",
+    "plans": {
+      "FREE": "Free",
+      "PRO": "Pro",
+      "BUSINESS": "Business"
+    },
+    "usage": {
+      "customers": "{limit, plural, =-1 {{used} customers} other {{used} of # customers}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {{used} invoices this month} other {{used} of # invoices this month}}",
+      "seats": "{limit, plural, =-1 {{used} seats used} other {{used} of # seats used}}"
+    },
+    "limits": {
+      "customers": "{limit, plural, =-1 {Unlimited customers} other {Up to # customers}}",
+      "invoicesPerMonth": "{limit, plural, =-1 {Unlimited invoices} other {Up to # invoices a month}}",
+      "seats": "{limit, plural, =-1 {Unlimited seats} other {Up to # seats}}"
+    },
+    "features": {
+      "customBranding": "Custom branding",
+      "mfaEnforcement": "Enforce two-factor sign-in",
+      "auditExport": "Audit log export"
+    },
+    "resources": {
+      "customers": "customers",
+      "invoicesPerMonth": "invoices this month",
+      "seats": "seats"
+    },
+    "changePlan": "Change plan",
+    "newPlan": "New plan",
+    "upgrade": "Upgrade to {plan}",
+    "downgrade": "Switch to {plan}",
+    "changing": "Changing plan…",
+    "changed": "You are now on {plan}.",
+    "ownerOnly": "Only an owner can change the plan.",
+    "testCard": "Test card",
+    "testCardHint": "Billing goes through a simulated gateway; no money moves.",
+    "downgradeWarning": "You are over this plan’s limit for: {resources}. Nothing is deleted, but you will not be able to add more until you are under the limit.",
+    "upgradeLink": "See plans and upgrade"
+  }
+}
