@@ -5,7 +5,10 @@
     "composite": false,
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
-    "paths": { "@web/*": ["./apps/web/src/*"] }
+    "paths": {
+      "@web/*": ["./apps/web/src/*"],
+      "@admin/*": ["./apps/admin/src/*"]
+    }
   },
   "include": ["apps/*/src", "apps/*/e2e", "packages/*/src"]
 }

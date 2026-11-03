@@ -1,0 +1,53 @@
+{
+  "name": "@ledgerly/admin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Platform admin console (ADR-0004): Vite + React Router data mode + Redux Toolkit/RTK Query.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview --port 5173 --strictPort",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/graphql/__generated__",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@ledgerly/ui": "workspace:*",
+    "@reduxjs/toolkit": "2.13.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-redux": "9.3.1",
+    "react-router": "8.5.1"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "7.4.6",
+    "@graphql-codegen/client-preset": "6.2.3",
+    "@graphql-typed-document-node/core": "3.2.0",
+    "@ledgerly/config": "workspace:*",
+    "@ledgerly/graphql": "workspace:*",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "axe-core": "4.14.0",
+    "eslint": "10.13.0",
+    "eslint-plugin-jsx-a11y-x": "0.2.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "graphql": "^16.14.2",
+    "jsdom": "30.1.3",
+    "msw": "3.0.3",
+    "sass": "1.106.1",
+    "typescript": "~6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}
