@@ -38,27 +38,6 @@ make e2e        # Playwright against a fresh database (stop `make api`/`make web
 `make up-aws` also starts LocalStack (S3, SQS, SES, Lambda) and needs `LOCALSTACK_AUTH_TOKEN`
 (free Hobby plan, non-commercial) in `.env`; see `.env.example`.
 
-## Pull request reviews
-
-Every pull request gets three independent AI reviews, one per subject-matter expert defined in
-[`.claude/agents/`](.claude/agents):
-
-| Reviewer                        | Agent                          | Looks at                                                                  |
-| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------- |
-| React/Next.js SME: architecture | `nextjs-architecture-reviewer` | Server/client boundaries, data loading, state, Redux, routing, hooks      |
-| React/Next.js SME: UI quality   | `react-ui-quality-reviewer`    | Accessibility (AA), i18n and RTL, forms, theming, component and E2E tests |
-| Node.js SME: API                | `node-api-reviewer`            | Tenancy, transactions, idempotency, security, GraphQL, money, API tests   |
-
-The [`SME review`](.github/workflows/sme-review.yml) workflow runs them when a PR is opened,
-reopened or marked ready, each as its own job, skipping a reviewer when nothing in its area
-changed. To review again after new commits, remove and re-add the `sme-review` label. It needs
-an `ANTHROPIC_API_KEY` repository secret (Settings → Secrets and variables → Actions); without
-it the jobs pass with a notice.
-
-Locally, ask Claude Code for the same review, for example "review this branch with the
-node-api-reviewer agent". Their findings are claims to verify, like any review; they don't
-approve or merge.
-
 ## Simulations
 
 Deliberate stand-ins, named `*Simulator`:

@@ -70,5 +70,3 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - Architecture decisions go in `docs/adr/` in MADR format. Accepted ADRs are superseded, never
   edited.
 - Deliberate simulations are named `*Simulator` and are called out in the README.
-- PRs get three independent SME reviews (`.claude/agents/`, `.github/workflows/sme-review.yml`).
-  Treat their findings like any review: verify, then fix or reply with the reason.
