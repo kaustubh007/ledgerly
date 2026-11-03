@@ -9,14 +9,15 @@ A multi-tenant invoicing SaaS built in phases as a production-grade learning pro
 
 ## Status
 
-| Phase                            | State                                   |
-| -------------------------------- | --------------------------------------- |
-| 0 Plan                           | done                                    |
-| 1 Foundation                     | done                                    |
-| 2 API, data, auth, observability | done                                    |
-| 3 Web shell                      | done                                    |
-| 4 Core features                  | done                                    |
-| 5–8                              | planned (5 = admin console, revision 3) |
+| Phase                            | State     |
+| -------------------------------- | --------- |
+| 0 Plan                           | done      |
+| 1 Foundation                     | done      |
+| 2 API, data, auth, observability | done      |
+| 3 Web shell                      | done      |
+| 4 Core features                  | done      |
+| 5 Admin console                  | in review |
+| 6–8                              | planned   |
 
 ## Getting started
 
@@ -28,12 +29,18 @@ pnpm install
 pnpm check      # format, lint, typecheck, tests with coverage, architecture rules
 make up         # MongoDB replica set, OpenTelemetry collector, Jaeger (http://localhost:16686)
 make smoke      # proves transactions and tracing work
-make env        # creates .env with generated dev keys
+make env        # creates .env with generated dev keys (adds keys new phases need)
 make api        # the GraphQL API on http://localhost:4000/graphql
 make smoke-api  # with the API running: one request, traced end to end in Jaeger
 make web        # the Next.js app on http://localhost:3000 (needs `make api`)
-make e2e        # Playwright against a fresh database (stop `make api`/`make web` first)
+make staff EMAIL=you@ledgerly.example   # a staff member for the admin console (prints a password)
+make admin      # the admin console on http://localhost:5173 (needs `make api`)
+make e2e        # Playwright against a fresh database (stop `make api`/`web`/`admin` first)
 ```
+
+The admin console (`apps/admin`) is for Ledgerly's own staff, not tenants (ADR-0004). Signing in
+always takes a password and a code from an authenticator app; the first sign-in shows the setup
+key to add to one.
 
 `make up-aws` also starts LocalStack (S3, SQS, SES, Lambda) and needs `LOCALSTACK_AUTH_TOKEN`
 (free Hobby plan, non-commercial) in `.env`; see `.env.example`.

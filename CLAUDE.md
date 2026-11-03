@@ -16,6 +16,8 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - `pnpm --filter @ledgerly/api codegen` — regenerate resolver types after a schema change
 - `pnpm --filter @ledgerly/web codegen` — regenerate typed documents after changing a query
 - `make web` / `make e2e` — run the Next.js app; Playwright against a fresh e2e database
+- `make admin` / `make staff EMAIL=…` — run the admin console; create a staff member
+- `pnpm --filter @ledgerly/admin codegen` — regenerate the admin console's typed documents
 
 ## Non-negotiable rules
 
@@ -42,6 +44,11 @@ Plan: `PLAN.md`. Decisions: `DECISIONS.md`, `docs/adr/`.
 - External side effects (the payment gateway) never run inside a database transaction. They
   run after the replay check, with `gatewayKey`, and are compensated (refund) if recording fails.
 - Plan limits are checked with `checkCapacity` inside the transaction that creates the resource.
+- Admin console (ADR-0004): only `apps/api/src/admin/` may use `runAsPlatform()` or register
+  platform reads (dependency-cruiser enforces it). Platform reads are counts and totals, one
+  named organisation per query, never tenant writes. Every admin Query/Mutation field writes an
+  audit entry (`apps/api/test/admin.test.ts` enforces it); OPS actions require a reason.
+- Staff and tenant identities never mix: separate collections, cookies, middleware and schemas.
 - Never commit a red build. Never leave a TODO in a completed phase.
 
 ## Style

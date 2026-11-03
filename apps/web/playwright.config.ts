@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { STAFF } from './e2e/admin';
 
-// End-to-end against the real stack: MongoDB from `make up`, the built API and `next start`,
-// both started here, on a dedicated database emptied before the API boots
+// End-to-end against the real stack: MongoDB from `make up`, the built API, `next start` and the
+// admin console's `vite preview`, all started here, on a dedicated database emptied before the API boots
 // (e2e/prepare-database.sh). A server that logs an error fails the run, even if every test
 // passed (e2e/global-teardown.ts). Stop `make api` / `make web` first: they hold the ports.
 const CI = Boolean(process.env['CI']);
@@ -29,11 +30,23 @@ export default defineConfig({
       cwd: '../api',
       url: 'http://localhost:4000/healthz',
       reuseExistingServer: false,
-      env: { TRUST_PROXY_HOPS: '1', MONGODB_URI },
+      env: {
+        TRUST_PROXY_HOPS: '1',
+        MONGODB_URI,
+        STAFF_EMAIL: STAFF.email,
+        STAFF_PASSWORD: STAFF.password,
+      },
     },
     {
       command: 'mkdir -p ../../.e2e-logs && pnpm start 2>&1 | tee ../../.e2e-logs/web.log',
       url: 'http://localhost:3000/en/sign-in',
+      reuseExistingServer: false,
+    },
+    {
+      // The built admin console (ADR-0004), on its own origin, proxying /admin/graphql.
+      command: 'mkdir -p ../../.e2e-logs && pnpm preview 2>&1 | tee ../../.e2e-logs/admin.log',
+      cwd: '../admin',
+      url: 'http://localhost:5173/sign-in',
       reuseExistingServer: false,
     },
   ],

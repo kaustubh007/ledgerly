@@ -3,7 +3,7 @@
 How the code is laid out, how a request moves through it, and the few rules that keep it correct.
 Read it once from top to bottom, then keep it open while you read the code.
 
-Written as of the end of Phase 4. When the code and this page disagree, the code and
+Written as of Phase 5 (in review). When the code and this page disagree, the code and
 [`CLAUDE.md`](../CLAUDE.md) win, and this page should be fixed.
 
 | Product                | Front end            | API                        | Data                  | Language                | Repo                      |
@@ -44,7 +44,7 @@ It is built in phases as a learning project, so every phase ends with a write-up
 | 2     | API, tenancy, auth        | done    |
 | 3     | Web shell                 | done    |
 | 4     | Invoices, payments, plans | done    |
-| 5     | Admin console             | next    |
+| 5     | Admin console             | review  |
 | 6–8   | PDFs, theming, AWS        | planned |
 
 Nothing is deployed to AWS yet. Everything runs locally in Docker; the cloud work is Phase 8.
@@ -62,6 +62,8 @@ flowchart LR
   W -->|server-side GraphQL<br/>forwards access cookie| A
   A --> M[(MongoDB<br/>replica set)]
   A -.->|traces| J[OTel collector<br/>to Jaeger]
+  S[Staff browser] -->|/admin/graphql, own origin| A
+  S -->|static SPA| AD[apps/admin<br/>Vite + React Router]
   subgraph shared[packages]
     D[domain<br/>Money, Invoice, roles, plans]
     V[validation<br/>zod input rules]
@@ -78,12 +80,14 @@ flowchart LR
 ```text
 ledgerly/
 ├─ apps/
-│  ├─ api/            GraphQL API: data, tenancy, auth, payments
-│  └─ web/            Next.js tenant app (pages, components, Redux, Apollo)
+│  ├─ api/            GraphQL API: data, tenancy, auth, payments; admin API in src/admin/
+│  ├─ web/            Next.js tenant app (pages, components, Redux, Apollo)
+│  └─ admin/          staff-only console (Vite, React Router data mode, RTK Query)
 ├─ packages/
 │  ├─ domain/         pure business rules, zero dependencies
 │  ├─ validation/     zod schemas shared by forms and resolvers
-│  ├─ graphql/        the .graphql schema files, the API's contract
+│  ├─ graphql/        the .graphql schema files: schema/tenant and schema/admin
+│  ├─ ui/             design tokens and base styles shared by web and admin
 │  └─ config/         shared TypeScript and lint config
 ├─ docs/adr/          architecture decisions (MADR), never edited once accepted
 ├─ docs/learn/        one learning note per phase
@@ -219,6 +223,25 @@ Server Component, then hands it to a client component, either directly or with
 The Redux store is created **once per request** by `StoreProvider`. A store at module level
 would be shared by every user the Node server is rendering for, leaking one person's state into
 another's page.
+
+### The admin console (`apps/admin`)
+
+A separate app for Ledgerly's own support staff (ADR-0004), on its own origin, with its own
+GraphQL schema at `/admin/graphql`, its own staff accounts and cookies. Signing in always needs a
+password and an authenticator code. It deliberately makes the opposite choices to the tenant
+app, so you can compare them on real screens:
+
+| Concern     | Tenant app (`apps/web`)       | Admin console (`apps/admin`)                                      |
+| ----------- | ----------------------------- | ----------------------------------------------------------------- |
+| Rendering   | Next.js, Server Components    | A static SPA built by Vite                                        |
+| Routing     | App Router (folders)          | React Router data mode: loaders, actions, middleware, lazy routes |
+| Server data | Apollo Client's cache         | RTK Query, in Redux                                               |
+| Route guard | Server Component asks the API | Route middleware (runs before any loader)                         |
+| Optimistic  | React `useOptimistic`         | RTK Query `onQueryStarted` patches, undone on error               |
+
+Staff can read counts, totals and metadata across organisations, never invoices or customers.
+The API reaches tenant data for them only through `runAsPlatform()` in `apps/api/src/admin/`,
+and only for the reads registered there; every admin request is written to the audit log.
 
 ### Translations and accessibility are part of done
 
@@ -433,7 +456,7 @@ whole design; read the comment above the function.
 
 **D4. Charge the card, outside any transaction.**
 
-- `gatewayKey("invoice-payment:<orgId>", k, invoiceId, "100.00", "pm_card_visa")` →
+- `gatewayKey("invoice-payment:<orgId>", k, invoiceId, "100.00 USD", "pm_card_visa")` →
   `"invoice-payment:<orgId>:3f2c…:Xy9…"`. That is our key plus a digest of what is being
   charged.
 - `deps.paymentGateway.charge({ amount, paymentMethod, idempotencyKey, description: "Invoice 7" })`.
@@ -579,20 +602,22 @@ change sends nothing.
 [`CLAUDE.md`](../CLAUDE.md) lists the rules that are never broken. Most are enforced by a tool,
 so you'll hear about a break in CI rather than in review.
 
-| Rule                                                | Why                                                                  | Enforced by                                |
-| --------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------ |
-| Money is `Money`, never a `number`                  | Floating point loses cents                                           | Types, review                              |
-| No currency mixing, no FX                           | A total across currencies is meaningless                             | `CurrencyMismatchError`                    |
-| `domain` imports nothing                            | So it runs in the API and the browser                                | dependency-cruiser                         |
-| `orgId` comes from the context, never arguments     | A caller could pass someone else's id                                | Tenant guard, tenant-leak test             |
-| Every new Query/Mutation is in the tenant-leak test | A new resolver is a new way to leak data                             | The leak test fails on any uncovered field |
-| Roles loaded per request, not from the token        | A demoted user loses access at once                                  | Auth tests                                 |
-| Tokens never in `localStorage`                      | Any injected script could steal them                                 | HttpOnly cookies                           |
-| GraphQL types separate from DB and domain types     | Changing one must not silently change the others                     | Codegen mappers                            |
-| Client components don't fetch during SSR            | The server has no browser cookies; it fails silently                 | The SSR Apollo client throws               |
-| `'use client'` files export only components         | A server file importing a constant gets a placeholder, not the value | `client-boundary.test.ts`                  |
-| Card charges never inside a transaction             | Retries would charge twice                                           | Review, billing tests                      |
-| No red builds, no TODOs in a finished phase         | Unfinished work is listed openly instead                             | CI, grep before commit                     |
+| Rule                                                | Why                                                                  | Enforced by                                 |
+| --------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
+| Money is `Money`, never a `number`                  | Floating point loses cents                                           | Types, review                               |
+| No currency mixing, no FX                           | A total across currencies is meaningless                             | `CurrencyMismatchError`                     |
+| `domain` imports nothing                            | So it runs in the API and the browser                                | dependency-cruiser                          |
+| `orgId` comes from the context, never arguments     | A caller could pass someone else's id                                | Tenant guard, tenant-leak test              |
+| Every new Query/Mutation is in the tenant-leak test | A new resolver is a new way to leak data                             | The leak test fails on any uncovered field  |
+| Roles loaded per request, not from the token        | A demoted user loses access at once                                  | Auth tests                                  |
+| Tokens never in `localStorage`                      | Any injected script could steal them                                 | HttpOnly cookies                            |
+| GraphQL types separate from DB and domain types     | Changing one must not silently change the others                     | Codegen mappers                             |
+| Client components don't fetch during SSR            | The server has no browser cookies; it fails silently                 | The SSR Apollo client throws                |
+| `'use client'` files export only components         | A server file importing a constant gets a placeholder, not the value | `client-boundary.test.ts`                   |
+| Card charges never inside a transaction             | Retries would charge twice                                           | Review, billing tests                       |
+| Only `src/admin/` enters the platform scope         | It is the one deliberate hole in tenant isolation                    | dependency-cruiser, tenant-guard tests      |
+| Every admin Query/Mutation writes an audit entry    | Staff access to tenants must always be traceable                     | `admin.test.ts` fails on an uncovered field |
+| No red builds, no TODOs in a finished phase         | Unfinished work is listed openly instead                             | CI, grep before commit                      |
 
 When the plan doesn't say how to do something, the choice goes in
 [`DECISIONS.md`](../DECISIONS.md). A bigger architectural choice gets an ADR in
@@ -601,13 +626,14 @@ replaced part of ADR-0003 this way).
 
 ## 10. How we test
 
-| Tier           | Tests | What is real, what is not                                                                                 |
-| -------------- | ----: | --------------------------------------------------------------------------------------------------------- |
-| Domain         |   160 | Pure functions, no mocks. 100% coverage.                                                                  |
-| Validation     |     7 | zod schemas.                                                                                              |
-| API            |   144 | Real HTTP, real MongoDB replica set in Testcontainers, a movable test clock.                              |
-| Web components |    74 | React Testing Library in jsdom; queries by role and label; axe on every render.                           |
-| End to end     |    11 | Playwright against the real API and web server on a fresh database. Fails if either server logs an error. |
+| Tier           | Tests | What is real, what is not                                                                                        |
+| -------------- | ----: | ---------------------------------------------------------------------------------------------------------------- |
+| Domain         |   160 | Pure functions, no mocks. 100% coverage.                                                                         |
+| Validation     |    11 | zod schemas.                                                                                                     |
+| API            |   187 | Real HTTP, real MongoDB replica set in Testcontainers, a movable test clock.                                     |
+| Web components |    78 | React Testing Library in jsdom; queries by role and label; axe on every render.                                  |
+| Admin console  |    27 | The real route tree in a memory router, a real store, MSW answering the API.                                     |
+| End to end     |    12 | Playwright against the real API, web app and admin console on a fresh database. Fails if a server logs an error. |
 
 Four test files are worth reading before any feature code: `apps/api/test/tenant-leak.test.ts`
 (can org A see org B?), `concurrency.test.ts` (races), `auth.test.ts` (refresh, theft, CSRF) and
@@ -669,7 +695,9 @@ Listed openly so nobody mistakes them for finished work:
 - The per-IP rate limit is per API process, and server-rendered pages share the web server's IP.
   Both must be fixed before deploying (Phase 8).
 - German and Arabic text needs review by native speakers.
-- No AWS infrastructure exists yet; LocalStack is defined but unused.
+- No AWS infrastructure exists yet; LocalStack is defined but unused. The admin origin's
+  CloudFront distribution, WAF allowlist and CSP header come with it (Phase 8).
+- Staff are created with `make staff`; there is no staff management screen yet.
 
 ## 14. Glossary
 
@@ -684,4 +712,6 @@ Listed openly so nobody mistakes them for finished work:
 | RSC                | React Server Component: renders only on the server and ships no JavaScript.                                                  |
 | Hydration          | The browser attaching event handlers to HTML the server already rendered.                                                    |
 | ADR                | Architecture Decision Record: one decision, its context and its consequences.                                                |
+| Platform scope     | The admin API's controlled exception to tenant isolation: registered reads of one named organisation, all audited.           |
+| TOTP               | Time-based one-time password: the 6-digit code an authenticator app shows, new every 30 seconds.                             |
 | `*Simulator`       | A deliberate stand-in for an outside service, named so nobody mistakes it for the real one. Listed in the README.            |

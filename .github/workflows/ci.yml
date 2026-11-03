@@ -32,6 +32,7 @@ jobs:
         run: |
           pnpm --filter @ledgerly/api codegen:check
           pnpm --filter @ledgerly/web codegen:check
+          pnpm --filter @ledgerly/admin codegen:check
       # API tests start a real MongoDB replica set with Testcontainers (Docker is on the runner).
       - run: pnpm check
       - run: pnpm build

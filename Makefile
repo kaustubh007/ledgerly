@@ -1,4 +1,4 @@
-.PHONY: up up-aws down reset ps smoke smoke-api env api web e2e check
+.PHONY: admin staff up up-aws down reset ps smoke smoke-api env api web e2e check
 
 up: ## MongoDB (replica set), OpenTelemetry collector, Jaeger
 	docker compose up -d --wait mongo otel-collector jaeger
@@ -36,6 +36,13 @@ smoke-api: ## with the API running: proves one request is traced end to end in J
 
 web: ## the Next.js app on http://localhost:3000 (needs the API: `make api`)
 	pnpm --filter @ledgerly/web dev
+
+admin: ## the admin console on http://localhost:5173 (needs the API: `make api`)
+	pnpm --filter @ledgerly/admin dev
+
+staff: ## creates an OPS staff member: make staff EMAIL=you@ledgerly.example (prints a password)
+	@test -n "$(EMAIL)" || { echo "usage: make staff EMAIL=you@ledgerly.example [ROLE=OPS|SUPPORT]"; exit 1; }
+	pnpm --filter @ledgerly/api staff:create --email "$(EMAIL)" --role "$(or $(ROLE),OPS)"
 
 e2e: ## builds everything and runs Playwright against a fresh e2e database (stop `make api`/`make web` first)
 	pnpm build

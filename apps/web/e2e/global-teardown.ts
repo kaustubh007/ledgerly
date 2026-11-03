@@ -10,6 +10,8 @@ export default function globalTeardown(): void {
   for (const [file, pattern] of [
     ['web.log', /⨯/],
     ['api.log', /"level":(50|60)/],
+    // vite preview: a request it could not proxy to the API.
+    ['admin.log', /proxy error/i],
   ] as const) {
     const path = `${LOG_DIR}/${file}`;
     if (!existsSync(path)) continue;

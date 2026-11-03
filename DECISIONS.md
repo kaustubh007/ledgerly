@@ -2,6 +2,109 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Phase 5 (2026-11-03)
+
+### Platform scope and the admin API (ADR-0004)
+
+- **Request context shape.** PLAN §3.6 describes a discriminated union. The code keeps its
+  object with optional parts and adds `staff` and `platform`; the exclusions are enforced in code
+  instead: `runAsPlatform()` refuses to start inside a tenant or tenant-user context, and
+  `runInTenant()` never carries a platform scope or staff session into the tenant context.
+- **What the platform scope allows: reads only, one organisation at a time.** The admin module
+  registers `Customer.countDocuments`, `Invoice.countDocuments`, `Invoice.aggregate` and
+  `Invitation.countDocuments`. Under `runAsPlatform()` the guard injects nothing: a registered
+  read must name exactly one organisation itself (its filter's `orgId`, or an aggregate's leading
+  `$match`). Anything else on a tenant model throws. No tenant writes are registered at all:
+  every OPS command writes global models (organisations, sessions), so PLAN's "registered
+  commands" turned out not to be needed.
+- **Audit coverage.** Every admin Query and Mutation field writes an entry, except `me` (the
+  caller's own record). Reads carry no reason; failed sign-ins are recorded with the email tried;
+  an OPS write and its entry commit in one transaction. `test/admin.test.ts` fails if a new field
+  is not seen writing an entry.
+- **Reason:** trimmed, 10 to 500 characters (`TOO_SMALL` below), required for every OPS action.
+- **Staff plan changes** are not charged or refunded and create no `BillingEvent` (a tenant model
+  the platform scope cannot write); the audit entry records `from` and `to`.
+- **Revoking sessions** requires the user to be a member of the organisation the staff member is
+  working on, then revokes all of that user's sessions (sessions are per user, not per org).
+- **Suspension** keeps all data and all reads. Every tenant mutation except account-level ones
+  (`signUp`, `logIn`, `verifyEmail`, password reset, own sessions, `createOrganization`,
+  `acceptInvitation`) returns `ORG_SUSPENDED`. It is applied by wrapping the built schema's
+  Mutation fields, so a mutation added later is covered automatically. The web app shows a
+  banner and translates the error in forms; forms now also show `FORBIDDEN` instead of the
+  generic message.
+- **Organisation search** is a case-insensitive prefix match on name or slug (regex-escaped), with
+  no text index: enough at this scale.
+
+### Staff identity
+
+- **Sessions:** an opaque random token in `__Host-adm` (HttpOnly, Secure, SameSite=Strict),
+  stored hashed; 8 hours absolute, 30 minutes idle (`lastSeenAt` written at most once a minute).
+  No refresh token: the session is short and server-side.
+- **Password, then a code, always.** The step between them is an HttpOnly cookie
+  (`__Host-adm-mfa`), valid 5 minutes and 5 attempts (counted atomically). The first sign-in
+  enrols: the secret is held encrypted on the challenge until the first valid code proves the
+  authenticator has it.
+- **TOTP:** otplib 13.5.0 (13.6.0 was three days old), SHA-1, 6 digits, 30 s, one step of drift
+  either way. A code is accepted once: the last accepted time step only moves forward, in an
+  atomic update, so even two racing requests cannot both use it. Secrets are AES-256-GCM with a
+  new `TOTP_ENCRYPTION_KEY`; `make env` appends it to an existing `.env`.
+- **Recovery codes:** ten, shown once at enrolment, stored hashed, each usable once; a recovery
+  code cannot complete an enrolment.
+- **Rate limits:** staff sign-in 5 per 15 minutes per email and 30 per IP (Mongo-backed).
+- **No QR code:** the setup key and otpauth URI are shown as text. A QR library is a dependency
+  for convenience only; it can come with Phase 7.
+- **Staff are created by script** (`make staff EMAIL=…`). There is no sign-up and no staff
+  management UI yet; disabling is setting `disabledAt`.
+
+### Admin console
+
+- **The guard is route middleware, not a loader.** Loaders of nested routes run in parallel, so
+  the page's request reached the API before the guard's redirect and its `UNAUTHENTICATED` raced
+  it (found by the first route test). React Router 8 middleware runs before any loader.
+- **Optimistic where it is safe:** suspend and unsuspend patch the detail and every cached list
+  page, undone on refusal (with a toast from the listener middleware); a plan change waits for
+  the server; revoking sessions patches the member's session count.
+- **Documents are typed strings** (codegen `documentMode: 'string'`): no GraphQL parser in the
+  browser bundle.
+- **No polling:** every admin read is audited, so polling would fill the audit log with views.
+  PLAN lists polling as a teaching item; skipped on purpose.
+- **OPS actions open in place**, not in a modal dialog: simpler for keyboard and screen-reader
+  users, and testable in jsdom (which has no `showModal`).
+- **"Recently viewed"** is memory only (entity adapter); it does not survive a reload.
+- **`packages/ui`** holds the design tokens and base styles, moved from the web app and used by
+  both apps. No shared components yet: the web app's are bound to next-intl.
+- **Test timing:** admin tests run whole sign-in flows through real routing; under coverage with
+  every suite in parallel they took longer than Testing Library's 1-second wait. The wait is 10 s
+  and the per-test limit 20 s; user-event types without delay.
+- **Security headers:** the build has no inline scripts (checked), so production can use a static
+  `script-src 'self'`; the header itself is CloudFront configuration (Phase 8).
+- **Localhost cookies ignore ports**, so in development the tenant and admin cookies reach both
+  apps. They are still separate sessions (different names, read by different middleware; the
+  admin tests prove neither is accepted by the other API). In production the origins differ.
+
+### End-to-end
+
+- The admin gate lives in `apps/web/e2e/` because it spans both apps: Playwright starts a third
+  server (`vite preview` of the built console), and `prepare-database.sh` creates the OPS staff
+  member. The test computes TOTP codes with `node:crypto` (no new dependency).
+- One test covers the whole gate: a TOTP code is accepted once per 30 seconds, so parallel staff
+  sign-ins would fail by design.
+
+### Corrections
+
+- `docs/ONBOARDING.md` (dry run, step D4): the gateway key digests `payment.toString()`, which is
+  `"100.00 USD"`, not `"100.00"`. Fixed.
+- `Money.toString()` includes the currency code; the admin resolver used it for amounts. Caught by
+  the admin test and changed to `toDecimalString()`.
+
+### Not done in Phase 5
+
+- QR code at enrolment; a staff management UI; the WAF IP allowlist, CloudFront distribution
+  and CSP header for the admin origin (Phase 8); polling; an E2E test signed in as SUPPORT
+  (covered by API and component tests); audit log export and retention.
+- The TOTP code lives in `src/admin/staff/`. Tenant MFA (Phase 8, E8) will move it to a shared
+  module rather than import from the admin module.
+
 ## Phase 4 (2026-10-29)
 
 ### Code scanning (after Phase 4)
