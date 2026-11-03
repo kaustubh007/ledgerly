@@ -1,0 +1,23 @@
+"An instant, ISO 8601 with offset."
+scalar DateTime
+
+"""
+A validation or business refusal, returned as data. GraphQL errors are reserved for
+authentication (UNAUTHENTICATED), authorisation (FORBIDDEN), malformed requests and faults.
+"""
+type UserError {
+  code: String!
+  message: String!
+  field: [String!]
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+"An exact amount: a decimal string and an ISO 4217 code."
+type Money {
+  amount: String!
+  currency: String!
+}

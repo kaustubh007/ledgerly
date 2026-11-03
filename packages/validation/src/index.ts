@@ -115,6 +115,50 @@ export const ChangePlanInput = z.object({
 
 export const OrganizationName = trimmed(2, 80);
 
+// ── Admin console (ADR-0004) ───────────────────────────────────────────────────────────────
+
+export const StaffSignInInput = z.object({ email, password: z.string().min(1).max(128) });
+
+/** A 6-digit authenticator code, or a recovery code such as `k3m9-x2pq`. */
+export const mfaCode = matching(
+  /^(\d{6}|[a-z2-9]{4}-[a-z2-9]{4})$/,
+  'INVALID_CODE',
+  'Enter the 6-digit code from your authenticator app, or a recovery code',
+);
+export const VerifyMfaInput = z.object({ code: z.string().trim().toLowerCase().pipe(mfaCode) });
+
+/** Why a staff member is acting: required for every OPS action, written to the audit log. */
+export const adminReason = z
+  .string()
+  .trim()
+  .min(10, 'Give a reason of at least 10 characters')
+  .max(500);
+
+const objectIdString = matching(/^[a-f\d]{24}$/, 'INVALID_ID', 'Not a valid id');
+
+export const OrganizationActionInput = z.object({
+  organizationId: objectIdString,
+  reason: adminReason,
+});
+
+export const ChangeOrganizationPlanInput = z.object({
+  organizationId: objectIdString,
+  plan: planCode,
+  reason: adminReason,
+});
+
+export const RevokeUserSessionsInput = z.object({
+  organizationId: objectIdString,
+  userId: objectIdString,
+  reason: adminReason,
+});
+
+export const AuditLogFilter = z.object({
+  organizationId: objectIdString.optional(),
+  staffId: objectIdString.optional(),
+  action: z.string().trim().max(60).optional(),
+});
+
 export interface UserError {
   readonly code: string;
   readonly message: string;

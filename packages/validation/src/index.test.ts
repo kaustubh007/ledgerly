@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AuditLogFilter,
+  ChangeOrganizationPlanInput,
   CreateInvoiceInput,
   CustomerInput,
   InviteMemberInput,
+  OrganizationActionInput,
   parseInput,
   SignUpInput,
+  VerifyMfaInput,
 } from './index.ts';
 
 const codes = (r: ReturnType<typeof parseInput>) => (r.ok ? [] : r.userErrors.map((e) => e.code));
@@ -83,5 +87,40 @@ describe('InviteMemberInput', () => {
     const r = parseInput(InviteMemberInput, { email: 'a@b.co', role: 'GOD' }, []);
     expect(codes(r)).toEqual(['INVALID_ROLE']);
     expect(fields(r)).toEqual(['role']);
+  });
+});
+
+describe('admin console inputs', () => {
+  const org = '6650a1b2c3d4e5f6a7b8c9d0';
+
+  it('accepts a 6-digit code or a recovery code, normalised to lower case', () => {
+    expect(parseInput(VerifyMfaInput, { code: ' 123456 ' })).toEqual({
+      ok: true,
+      value: { code: '123456' },
+    });
+    expect(parseInput(VerifyMfaInput, { code: 'K3M9-X2PQ' })).toEqual({
+      ok: true,
+      value: { code: 'k3m9-x2pq' },
+    });
+    expect(codes(parseInput(VerifyMfaInput, { code: '12345' }))).toEqual(['INVALID_CODE']);
+  });
+
+  it('requires a reason of at least 10 characters, after trimming', () => {
+    const r = parseInput(OrganizationActionInput, { organizationId: org, reason: '   too short ' });
+    expect(codes(r)).toEqual(['TOO_SMALL']);
+    expect(fields(r)).toEqual(['input.reason']);
+  });
+
+  it('refuses ids that are not ObjectIds and unknown plans', () => {
+    const r = parseInput(ChangeOrganizationPlanInput, {
+      organizationId: 'org-1',
+      plan: 'ENTERPRISE',
+      reason: 'Customer asked for a trial upgrade',
+    });
+    expect(codes(r)).toEqual(['INVALID_ID', 'INVALID_PLAN']);
+  });
+
+  it('accepts an empty audit filter', () => {
+    expect(parseInput(AuditLogFilter, {}).ok).toBe(true);
   });
 });

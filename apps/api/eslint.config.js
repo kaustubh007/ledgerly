@@ -2,7 +2,7 @@ import { createConfig } from '@ledgerly/config/eslint';
 
 export default [
   ...createConfig({ tsconfigRootDir: import.meta.dirname }),
-  { ignores: ['src/graphql/__generated__/**'] },
+  { ignores: ['src/graphql/__generated__/**', 'src/admin/graphql/__generated__/**'] },
   {
     // GraphQL responses are untyped JSON; tests read them with `any` rather than restating
     // every response shape.

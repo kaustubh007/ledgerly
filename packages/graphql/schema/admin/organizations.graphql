@@ -1,0 +1,120 @@
+enum OrganizationStatus {
+  ACTIVE
+  "Read-only for its members: every tenant mutation returns ORG_SUSPENDED."
+  SUSPENDED
+}
+
+enum PlanCode {
+  FREE
+  PRO
+  BUSINESS
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  slug: String!
+  plan: PlanCode!
+  status: OrganizationStatus!
+  createdAt: DateTime!
+  suspendedAt: DateTime
+  memberCount: Int!
+  "Current consumption against the plan's limits."
+  usage: Usage!
+  "Outstanding (sent, not yet paid) per currency. Never summed across currencies."
+  outstanding: [CurrencyTotal!]!
+  health: Health!
+  members: [Member!]!
+}
+
+type Usage {
+  customers: Int!
+  invoicesThisMonth: Int!
+  "Members plus open invitations."
+  seats: Int!
+  "The plan's limits; null means unlimited."
+  customersLimit: Int
+  invoicesPerMonthLimit: Int
+  seatsLimit: Int
+}
+
+type CurrencyTotal {
+  currency: String!
+  amount: Money!
+  invoices: Int!
+}
+
+type Health {
+  "The most recent use of any member's session."
+  lastActiveAt: DateTime
+  overdueInvoices: Int!
+}
+
+type Member {
+  userId: ID!
+  name: String!
+  email: String!
+  role: String!
+  activeSessions: Int!
+}
+
+type OrganizationEdge {
+  cursor: String!
+  node: Organization!
+}
+
+type OrganizationConnection {
+  edges: [OrganizationEdge!]!
+  pageInfo: PageInfo!
+}
+
+input OrganizationActionInput {
+  organizationId: ID!
+  "Why: at least 10 characters. Written to the audit log."
+  reason: String!
+}
+
+input ChangeOrganizationPlanInput {
+  organizationId: ID!
+  plan: PlanCode!
+  reason: String!
+}
+
+input RevokeUserSessionsInput {
+  organizationId: ID!
+  "Must be a member of the organisation."
+  userId: ID!
+  reason: String!
+}
+
+type OrganizationPayload {
+  organization: Organization
+  userErrors: [UserError!]!
+}
+
+type RevokeUserSessionsPayload {
+  revoked: Int!
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  "Newest first. `search` matches the start of the name or slug, case-insensitively."
+  organizations(
+    search: String
+    status: OrganizationStatus
+    first: Int
+    after: String
+  ): OrganizationConnection!
+  organization(id: ID!): Organization
+}
+
+extend type Mutation {
+  "OPS only."
+  suspendOrganization(input: OrganizationActionInput!): OrganizationPayload!
+  "OPS only."
+  unsuspendOrganization(input: OrganizationActionInput!): OrganizationPayload!
+  "OPS only. No charge or refund: a support change, recorded in the audit log."
+  changeOrganizationPlan(input: ChangeOrganizationPlanInput!): OrganizationPayload!
+  "OPS only. Signs the user out everywhere, in every organisation."
+  revokeUserSessions(input: RevokeUserSessionsInput!): RevokeUserSessionsPayload!
+}

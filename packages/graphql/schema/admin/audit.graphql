@@ -1,0 +1,34 @@
+type AuditEntry {
+  id: ID!
+  at: DateTime!
+  "Null for a failed sign-in by an unknown email."
+  staff: Staff
+  "e.g. `organization.suspend`, `organization.view`, `staff.signIn`."
+  action: String!
+  organizationId: ID
+  organizationName: String
+  targetUserId: ID
+  reason: String
+}
+
+type AuditEntryEdge {
+  cursor: String!
+  node: AuditEntry!
+}
+
+type AuditEntryConnection {
+  edges: [AuditEntryEdge!]!
+  pageInfo: PageInfo!
+}
+
+input AuditLogFilter {
+  organizationId: ID
+  staffId: ID
+  "Exact action, e.g. `organization.suspend`."
+  action: String
+}
+
+extend type Query {
+  "Newest first."
+  auditLog(filter: AuditLogFilter, first: Int, after: String): AuditEntryConnection!
+}

@@ -4,6 +4,9 @@ import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/dis
 import { expressMiddleware } from '@as-integrations/express5';
 import cookieParser from 'cookie-parser';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import { createAdminLoaders, type AdminContext } from '../admin/context.ts';
+import { buildAdminSchema } from '../admin/graphql/schema.ts';
+import { adminRequestContext } from '../admin/http.ts';
 import { runWithContext, type RequestContext } from '../context/request-context.ts';
 import { isConnected } from '../data/connection.ts';
 import type { Deps } from '../deps.ts';
@@ -65,6 +68,8 @@ function requestLog(deps: Deps) {
 export interface App {
   readonly app: Express;
   readonly apollo: ApolloServer<GraphQLContext>;
+  /** The admin console's own server and schema (ADR-0004). */
+  readonly adminApollo: ApolloServer<AdminContext>;
 }
 
 export async function createApp(deps: Deps): Promise<App> {
@@ -80,7 +85,18 @@ export async function createApp(deps: Deps): Promise<App> {
     includeStacktraceInErrorResponses: !production,
     plugins: production ? [ApolloServerPluginLandingPageDisabled()] : [],
   });
-  await apollo.start();
+  // A second server, not a second set of fields: nothing in the admin schema is reachable from
+  // the tenant one, and the two share no session (ADR-0004).
+  const adminApollo = new ApolloServer<AdminContext>({
+    schema: buildAdminSchema(),
+    csrfPrevention: true,
+    introspection: !production,
+    validationRules: [maxDepthRule(12), maxAliasesRule(20)],
+    formatError: createErrorFormatter(deps.logger),
+    includeStacktraceInErrorResponses: !production,
+    plugins: production ? [ApolloServerPluginLandingPageDisabled()] : [],
+  });
+  await Promise.all([apollo.start(), adminApollo.start()]);
 
   const app = express();
   app.disable('x-powered-by');
@@ -92,13 +108,17 @@ export async function createApp(deps: Deps): Promise<App> {
   });
 
   // Rate limiting comes first: authenticating a request already costs a database read.
+  app.use(requestRateLimit(deps), cookieParser(), express.json({ limit: '100kb' }));
   app.use(
-    requestRateLimit(deps),
-    cookieParser(),
-    express.json({ limit: '100kb' }),
-    requestContext(deps),
+    '/admin/graphql',
+    adminRequestContext(deps),
     requestLog(deps),
+    expressMiddleware(adminApollo, {
+      context: ({ req, res }) => Promise.resolve({ deps, req, res, loaders: createAdminLoaders() }),
+    }),
   );
+  // Tenant requests only: the admin path above never reaches the tenant session middleware.
+  app.use('/graphql', requestContext(deps), requestLog(deps));
   app.use('/graphql/auth', authRoutes(deps));
   app.use(
     '/graphql',
@@ -113,5 +133,5 @@ export async function createApp(deps: Deps): Promise<App> {
     if (!res.headersSent) res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
   });
 
-  return { app, apollo };
+  return { app, apollo, adminApollo };
 }

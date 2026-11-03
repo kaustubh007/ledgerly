@@ -8,6 +8,7 @@ import { useId, useMemo, useReducer, useState } from 'react';
 import { Field, FormError, SelectField } from '@web/components/form/Field';
 import styles from '@web/components/form/Form.module.scss';
 import { CreateInvoiceMutation } from '@web/graphql/documents';
+import { errorCodeOf } from '@web/lib/apollo/error-code';
 import { Link, useRouter } from '@web/i18n/navigation';
 import { useIdempotencyKey } from '@web/lib/hooks/useIdempotencyKey';
 import { useMoney } from '@web/lib/hooks/useMoney';
@@ -94,8 +95,8 @@ export function InvoiceEditor({
         return;
       }
       setErrors((result?.userErrors ?? []).map((e) => ({ ...e, field: e.field ?? [] })));
-    } catch {
-      setErrors([{ code: 'generic', message: '', field: [] }]);
+    } catch (error) {
+      setErrors([{ code: errorCodeOf(error), message: '', field: [] }]);
     } finally {
       setSubmitting(false);
     }

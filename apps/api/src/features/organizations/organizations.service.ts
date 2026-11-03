@@ -45,8 +45,8 @@ export async function createOrganization(
 export async function resolveMembership(
   userId: string,
   slug: string,
-): Promise<{ orgId: string; role: Role } | undefined> {
-  const org = await Organization.findOne({ slug }, { _id: 1 }).lean().exec();
+): Promise<{ orgId: string; role: Role; suspended: boolean } | undefined> {
+  const org = await Organization.findOne({ slug }, { _id: 1, status: 1 }).lean().exec();
   if (!org) return undefined;
   const membership = await Membership.findOne(
     { userId: new Types.ObjectId(userId), orgId: org._id },
@@ -54,5 +54,7 @@ export async function resolveMembership(
   )
     .lean()
     .exec();
-  return membership ? { orgId: org._id.toString(), role: membership.role } : undefined;
+  return membership
+    ? { orgId: org._id.toString(), role: membership.role, suspended: org.status === 'SUSPENDED' }
+    : undefined;
 }

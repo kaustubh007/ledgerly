@@ -16,6 +16,7 @@ import {
 } from '@web/graphql/documents';
 import { CUSTOMER_PAGE_SIZE, DOCUMENT_LOCALES } from './constants';
 import { Link } from '@web/i18n/navigation';
+import { errorCodeOf } from '@web/lib/apollo/error-code';
 import { useToast } from '@web/lib/hooks/useToast';
 import { useAppSelector } from '@web/store/hooks';
 import { selectActiveOrg } from '@web/store/slices/session';
@@ -90,8 +91,8 @@ export function CustomerForm({
         return;
       }
       form.applyUserErrors(payload?.userErrors ?? []);
-    } catch {
-      form.setError('root.server', { type: 'generic' });
+    } catch (error) {
+      form.setError('root.server', { type: errorCodeOf(error) });
     }
   });
 

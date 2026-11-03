@@ -41,6 +41,7 @@ export const OrgShellQuery = graphql(`
       slug
       name
       viewerRole
+      suspended
     }
   }
 `);

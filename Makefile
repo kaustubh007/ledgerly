@@ -24,6 +24,9 @@ smoke: ## verifies replica set, transactions, and tracing end to end
 env: ## creates .env from .env.example with freshly generated dev keys (never overwrites)
 	@test -f .env && echo ".env exists; leaving it alone" || \
 	  { cp .env.example .env && node apps/api/src/scripts/generate-keys.ts >> .env && echo "wrote .env"; }
+	@# Keys added in later phases are appended to an existing .env, never replacing a value.
+	@grep -q '^TOTP_ENCRYPTION_KEY=' .env || \
+	  { node apps/api/src/scripts/generate-keys.ts | grep '^TOTP_ENCRYPTION_KEY=' >> .env && echo "added TOTP_ENCRYPTION_KEY to .env"; }
 
 api: ## runs the API with watch mode and tracing (needs `make up` and `make env`)
 	pnpm --filter @ledgerly/api dev

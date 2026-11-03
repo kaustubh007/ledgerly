@@ -8,6 +8,7 @@ import { FormError } from '@web/components/form/Field';
 import styles from '@web/components/form/Form.module.scss';
 import type { InvoiceStatus } from '@web/graphql/__generated__/graphql';
 import { SendInvoiceMutation, VoidInvoiceMutation } from '@web/graphql/documents';
+import { errorCodeOf } from '@web/lib/apollo/error-code';
 import { useIdempotencyKey } from '@web/lib/hooks/useIdempotencyKey';
 import { usePermission } from '@web/lib/hooks/usePermission';
 import { useToast } from '@web/lib/hooks/useToast';
@@ -35,20 +36,29 @@ export function InvoiceActions({ id, status }: { id: string; status: InvoiceStat
 
   async function onSend() {
     setError(undefined);
-    const { data } = await send({ variables: { id, key } });
-    const number = data?.sendInvoice.invoice?.number;
-    if (number) {
-      renew();
-      toast('success', t('sent', { number }));
-    } else setError(data?.sendInvoice.userErrors[0]?.code ?? 'generic');
+    try {
+      const { data } = await send({ variables: { id, key } });
+      const number = data?.sendInvoice.invoice?.number;
+      if (number) {
+        renew();
+        toast('success', t('sent', { number }));
+      } else setError(data?.sendInvoice.userErrors[0]?.code ?? 'generic');
+    } catch (thrown) {
+      setError(errorCodeOf(thrown));
+    }
   }
 
   async function onVoid() {
     setError(undefined);
-    const { data } = await voidIt({ variables: { id } });
-    setConfirmingVoid(false);
-    if (data?.voidInvoice.invoice) toast('info', t('voided'));
-    else setError(data?.voidInvoice.userErrors[0]?.code ?? 'generic');
+    try {
+      const { data } = await voidIt({ variables: { id } });
+      setConfirmingVoid(false);
+      if (data?.voidInvoice.invoice) toast('info', t('voided'));
+      else setError(data?.voidInvoice.userErrors[0]?.code ?? 'generic');
+    } catch (thrown) {
+      setConfirmingVoid(false);
+      setError(errorCodeOf(thrown));
+    }
   }
 
   return (

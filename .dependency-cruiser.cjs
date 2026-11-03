@@ -33,6 +33,23 @@ module.exports = {
       to: { path: 'node_modules/mongodb/' },
     },
     {
+      name: 'platform-scope-only-from-admin',
+      comment:
+        'runAsPlatform() and the platform read allowlist cross tenants. Only the admin module ' +
+        'may use them; the tenant guard (src/data/) checks the allowlist (ADR-0004).',
+      severity: 'error',
+      from: {
+        path: '^apps/api/src/',
+        pathNot: ['^apps/api/src/admin/', '^apps/api/src/data/', '\\.test\\.ts$'],
+      },
+      to: {
+        path: [
+          '^apps/api/src/context/platform-scope\\.ts$',
+          '^apps/api/src/data/platform-access\\.ts$',
+        ],
+      },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       from: {},

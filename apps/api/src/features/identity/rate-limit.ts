@@ -23,6 +23,9 @@ export const LIMITS = {
   loginPerIp: { max: 100, windowMs: 15 * 60_000 },
   signUpPerIp: { max: 20, windowMs: 60 * 60_000 },
   passwordResetPerEmail: { max: 5, windowMs: 60 * 60_000 },
+  /** Admin console: staff sign-in is a higher-value target, so the budget is smaller. */
+  staffSignInPerEmail: { max: 5, windowMs: 15 * 60_000 },
+  staffSignInPerIp: { max: 30, windowMs: 15 * 60_000 },
 } as const satisfies Record<string, Limit>;
 
 /** Counts one attempt. Returns true when the limit was already reached (refuse the attempt). */

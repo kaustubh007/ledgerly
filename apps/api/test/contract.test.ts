@@ -6,16 +6,22 @@ import {
 } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import {
+  AuditLogFilter,
   CardPaymentInput,
+  ChangeOrganizationPlanInput,
   ChangePlanInput,
   CreateInvoiceInput,
   CustomerInput,
   InvoiceLineInput,
   LogInInput,
   MoneyInput,
+  OrganizationActionInput,
   RecordPaymentInput,
   ResetPasswordInput,
+  RevokeUserSessionsInput,
   SignUpInput,
+  StaffSignInInput,
+  VerifyMfaInput,
 } from '@ledgerly/validation';
 import type { z } from 'zod';
 import { loadTypeDefs } from '../src/graphql/schema.ts';
@@ -24,9 +30,12 @@ import { loadTypeDefs } from '../src/graphql/schema.ts';
 // with a zod twin, the field names must match, and a field is required in GraphQL exactly when
 // zod requires it.
 
-const schema = buildSchema(loadTypeDefs('tenant'));
+const SCHEMAS = {
+  tenant: buildSchema(loadTypeDefs('tenant')),
+  admin: buildSchema(loadTypeDefs('admin')),
+};
 
-const PAIRS: Record<string, z.ZodObject> = {
+const TENANT_PAIRS: Record<string, z.ZodObject> = {
   SignUpInput,
   LogInInput,
   ResetPasswordInput,
@@ -38,6 +47,17 @@ const PAIRS: Record<string, z.ZodObject> = {
   CardPaymentInput,
   ChangePlanInput,
 };
+
+const ADMIN_PAIRS: Record<string, z.ZodObject> = {
+  StaffSignInInput,
+  VerifyMfaInput,
+  OrganizationActionInput,
+  ChangeOrganizationPlanInput,
+  RevokeUserSessionsInput,
+  AuditLogFilter,
+};
+
+const PAIRS = { tenant: TENANT_PAIRS, admin: ADMIN_PAIRS };
 
 function graphqlShape(type: GraphQLInputObjectType) {
   return Object.fromEntries(
@@ -54,19 +74,22 @@ function zodShape(schema: z.ZodObject) {
   );
 }
 
-describe('zod ↔ GraphQL input contract', () => {
-  it.each(Object.keys(PAIRS))('%s matches', (name) => {
-    const type = schema.getType(name);
-    if (!isInputObjectType(type)) throw new Error(`${name} is not an input type`);
-    const zod = PAIRS[name];
-    if (!zod) throw new Error(`no zod schema for ${name}`);
-    expect(zodShape(zod)).toEqual(graphqlShape(type));
+describe.each(['tenant', 'admin'] as const)('zod ↔ GraphQL input contract (%s schema)', (name) => {
+  const schema = SCHEMAS[name];
+  const pairs = PAIRS[name];
+
+  it.each(Object.keys(pairs))('%s matches', (type) => {
+    const input = schema.getType(type);
+    if (!isInputObjectType(input)) throw new Error(`${type} is not an input type`);
+    const zod = pairs[type];
+    if (!zod) throw new Error(`no zod schema for ${type}`);
+    expect(zodShape(zod)).toEqual(graphqlShape(input));
   });
 
   it('every input type in the schema has a zod twin', () => {
     const inputs = Object.values(schema.getTypeMap())
       .filter(isInputObjectType)
       .map((t) => t.name);
-    expect(inputs.filter((n) => !(n in PAIRS))).toEqual([]);
+    expect(inputs.filter((n) => !(n in pairs))).toEqual([]);
   });
 });

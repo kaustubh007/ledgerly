@@ -395,6 +395,8 @@ export type Organization = {
   readonly name: Scalars['String']['output'];
   readonly plan: Plan;
   readonly slug: Scalars['String']['output'];
+  /** True when Ledgerly staff suspended it: read-only, and every tenant mutation returns ORG_SUSPENDED. */
+  readonly suspended: Scalars['Boolean']['output'];
   /** IANA time zone; decides what 'overdue' means for this organisation. */
   readonly timeZone: Scalars['String']['output'];
   readonly usage: Usage;
@@ -927,6 +929,7 @@ export type OrganizationResolvers<ContextType = GraphQLContext, ParentType exten
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   plan?: Resolver<ResolversTypes['Plan'], ParentType, ContextType>;
   slug?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  suspended?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   timeZone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   usage?: Resolver<ResolversTypes['Usage'], ParentType, ContextType>;
   viewerRole?: Resolver<ResolversTypes['Role'], ParentType, ContextType>;

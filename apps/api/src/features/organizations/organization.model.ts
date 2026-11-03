@@ -8,6 +8,9 @@ const organizationSchema = new Schema(
     timeZone: { type: String, required: true, default: 'UTC' },
     plan: { type: String, required: true, enum: ['FREE', 'PRO', 'BUSINESS'], default: 'FREE' },
     planChangedAt: { type: Date, default: null },
+    /** Set by platform staff (admin console). A suspended org is read-only for its members. */
+    status: { type: String, required: true, enum: ['ACTIVE', 'SUSPENDED'], default: 'ACTIVE' },
+    suspendedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

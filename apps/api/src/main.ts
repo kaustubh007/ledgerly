@@ -21,6 +21,7 @@ const deps: Deps = {
     config.ACCESS_TOKEN_PUBLIC_JWK,
   ),
   graceKey: Buffer.from(config.REFRESH_GRACE_KEY, 'base64url'),
+  totpKey: Buffer.from(config.TOTP_ENCRYPTION_KEY, 'base64url'),
   // A deliberate simulation (README, "Simulations"): no real money moves in this project.
   paymentGateway: new PaymentGatewaySimulator(systemClock),
 };
@@ -29,7 +30,7 @@ await connect(config.MONGODB_URI);
 onShutdown(disconnect);
 await syncIndexes();
 
-const { app, apollo } = await createApp(deps);
+const { app, apollo, adminApollo } = await createApp(deps);
 const server = createServer(app);
 server.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'api listening');
@@ -40,7 +41,7 @@ onShutdown(async () => {
       resolve();
     }),
   );
-  await apollo.stop();
+  await Promise.all([apollo.stop(), adminApollo.stop()]);
 });
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {

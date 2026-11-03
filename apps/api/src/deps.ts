@@ -12,6 +12,8 @@ export interface Deps {
   readonly accessKeys: AccessTokenKeys;
   /** Encrypts refresh successors during the grace window. */
   readonly graceKey: Buffer;
+  /** Encrypts staff TOTP secrets at rest (admin console). */
+  readonly totpKey: Buffer;
   /** Takes card payments: plan upgrades and invoice payments. PaymentGatewaySimulator here. */
   readonly paymentGateway: PaymentGateway;
 }

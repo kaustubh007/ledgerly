@@ -1,7 +1,9 @@
 import mongoose, { Schema, Types } from 'mongoose';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { runInTenant } from '../context/request-context.ts';
+import { runAsPlatform } from '../context/platform-scope.ts';
 import { connect, disconnect, inTransaction } from './connection.ts';
+import { allowPlatformReads } from './platform-access.ts';
 import { tenantGuard, tenantLookup, tenantOrgId, TenantScopeError } from './tenant-guard.ts';
 
 const thingSchema = new Schema({
@@ -195,6 +197,59 @@ describe('tenant guard: aggregation', () => {
     expect(() => tenantLookup({ from: 'x', localField: 'a', foreignField: 'b', as: 'c' })).toThrow(
       TenantScopeError,
     );
+  });
+});
+
+describe('tenant guard: platform scope (ADR-0004)', () => {
+  // Thing has two registered reads; Tag has none. The same rules hold for the real models the
+  // admin module registers (src/admin/platform-access.ts).
+  allowPlatformReads('GuardThing', ['countDocuments', 'aggregate']);
+  const asPlatform = <T>(fn: () => PromiseLike<T>): Promise<T> =>
+    runAsPlatform({ staffId: 'staff-1', reason: null }, async () => await fn());
+
+  it('admits a registered read that names one organisation, without injecting any', async () => {
+    expect(await asPlatform(() => Thing.countDocuments({ orgId: orgA }))).toBe(2);
+    expect(await asPlatform(() => Thing.countDocuments({ orgId: new Types.ObjectId(orgB) }))).toBe(
+      1,
+    );
+    const rows = await asPlatform(() =>
+      Thing.aggregate<{ total: number }>([
+        { $match: { orgId: new Types.ObjectId(orgA) } },
+        { $group: { _id: null, total: { $sum: '$n' } } },
+      ]),
+    );
+    expect(rows[0]?.total).toBe(3);
+  });
+
+  it.each([
+    ['an unregistered operation on a registered model', () => Thing.find({ orgId: orgA })],
+    ['any read of an unregistered model', () => Tag.countDocuments({ orgId: orgA })],
+    ['a read that names no organisation', () => Thing.countDocuments({})],
+    ['a read across organisations', () => Thing.countDocuments({ orgId: { $in: [orgA, orgB] } })],
+    ['an aggregate without a leading single-org $match', () => Thing.aggregate([{ $match: {} }])],
+    ['a write', () => Thing.updateMany({ orgId: orgA }, { n: 0 })],
+    ['a delete', () => Thing.deleteMany({ orgId: orgA })],
+    ['a create', () => Thing.create({ orgId: orgA, name: 'x' })],
+  ] as [string, () => PromiseLike<unknown>][])('still refuses %s', async (_, query) => {
+    await expect(asPlatform(query)).rejects.toThrow(TenantScopeError);
+  });
+
+  it('cannot be entered from a tenant context', async () => {
+    await expect(
+      asA(() => Promise.resolve(runAsPlatform({ staffId: 's', reason: null }, () => 1))),
+    ).rejects.toThrow(/tenant context/);
+  });
+
+  it('a tenant context inside it is tenant-scoped again, with no platform rights', async () => {
+    const counts = await asPlatform(() =>
+      runInTenant(orgB, 'OWNER', () => Thing.countDocuments().exec()),
+    );
+    expect(counts).toBe(1);
+    await expect(
+      asPlatform(() =>
+        runInTenant(orgB, 'OWNER', () => Thing.countDocuments({ orgId: orgA }).exec()),
+      ),
+    ).rejects.toThrow(TenantScopeError);
   });
 });
 

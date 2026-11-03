@@ -53,6 +53,7 @@ export default async function OrgLayout({
             slug: organization.slug,
             name: organization.name,
             role: organization.viewerRole,
+            suspended: organization.suspended,
           },
           memberships,
         },

@@ -11,6 +11,13 @@ export function unauthenticated(): GraphQLError {
   return new GraphQLError('Sign in to continue.', { extensions: { code: 'UNAUTHENTICATED' } });
 }
 
+export function orgSuspended(): GraphQLError {
+  return new GraphQLError(
+    'This organisation is suspended and is read-only. Contact Ledgerly support.',
+    { extensions: { code: 'ORG_SUSPENDED' } },
+  );
+}
+
 export function forbidden(message = 'You do not have access to this.'): GraphQLError {
   return new GraphQLError(message, { extensions: { code: 'FORBIDDEN' } });
 }
@@ -19,6 +26,7 @@ export function forbidden(message = 'You do not have access to this.'): GraphQLE
 const PUBLIC_CODES = new Set([
   'UNAUTHENTICATED',
   'FORBIDDEN',
+  'ORG_SUSPENDED',
   'BAD_USER_INPUT',
   'GRAPHQL_PARSE_FAILED',
   'GRAPHQL_VALIDATION_FAILED',

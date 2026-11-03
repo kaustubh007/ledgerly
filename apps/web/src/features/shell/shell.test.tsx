@@ -109,6 +109,25 @@ describe('AppShell', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('tells members of a suspended organisation that it is read-only', async () => {
+    const { container } = renderWithProviders(<AppShell>content</AppShell>, {
+      preloadedState: {
+        session: sessionState({
+          activeOrg: { slug: 'acme', name: 'Acme', role: 'OWNER', suspended: true },
+        }),
+      },
+    });
+    expect(screen.getByRole('main')).toHaveTextContent(/This organisation is suspended\./);
+    await expectNoAxeViolations(container);
+  });
+
+  it('shows no notice for an active organisation', () => {
+    renderWithProviders(<AppShell>content</AppShell>, {
+      preloadedState: { session: sessionState() },
+    });
+    expect(screen.queryByText(/suspended/)).toBeNull();
+  });
+
   it('toggles the navigation with an expanded state', async () => {
     renderWithProviders(<AppShell>x</AppShell>, { preloadedState: { session: sessionState() } });
     const toggle = screen.getByRole('button', { name: 'Open navigation' });

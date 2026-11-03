@@ -11,6 +11,7 @@ import formStyles from '@web/components/form/Form.module.scss';
 import { TEST_CARDS } from '@web/features/invoices/constants';
 import type { BillingQuery, BillingQueryVariables } from '@web/graphql/__generated__/graphql';
 import { ChangePlanMutation } from '@web/graphql/documents';
+import { errorCodeOf } from '@web/lib/apollo/error-code';
 import { useIdempotencyKey } from '@web/lib/hooks/useIdempotencyKey';
 import { useMoney } from '@web/lib/hooks/useMoney';
 import { usePermission } from '@web/lib/hooks/usePermission';
@@ -151,8 +152,8 @@ function ChangePlanForm({
         });
         const error = data?.changePlan.userErrors[0]?.code;
         if (error) return { error };
-      } catch {
-        return { error: 'generic' };
+      } catch (error) {
+        return { error: errorCodeOf(error) };
       }
       renew();
       toast('success', t('changed', { plan: t(`plans.${target}`) }));

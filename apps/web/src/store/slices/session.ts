@@ -6,6 +6,8 @@ export interface OrgSummary {
   readonly slug: string;
   readonly name: string;
   readonly role: Role;
+  /** Suspended by Ledgerly staff: read-only (ADR-0004). Only known for the active org. */
+  readonly suspended?: boolean;
 }
 
 /**

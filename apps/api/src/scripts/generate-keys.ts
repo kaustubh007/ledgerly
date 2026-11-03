@@ -6,3 +6,4 @@ const { privateKey, publicKey } = await generateKeyPair('EdDSA', { extractable: 
 console.log(`ACCESS_TOKEN_PRIVATE_JWK='${JSON.stringify(await exportJWK(privateKey))}'`);
 console.log(`ACCESS_TOKEN_PUBLIC_JWK='${JSON.stringify(await exportJWK(publicKey))}'`);
 console.log(`REFRESH_GRACE_KEY=${randomBytes(32).toString('base64url')}`);
+console.log(`TOTP_ENCRYPTION_KEY=${randomBytes(32).toString('base64url')}`);

@@ -6,6 +6,8 @@ type Organization {
   "IANA time zone; decides what 'overdue' means for this organisation."
   timeZone: String!
   viewerRole: Role!
+  "True when Ledgerly staff suspended it: read-only, and every tenant mutation returns ORG_SUSPENDED."
+  suspended: Boolean!
   "Requires `members:manage`."
   members: [Member!]!
   "Requires `members:manage`."

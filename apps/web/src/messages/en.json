@@ -49,7 +49,9 @@
     "NOT_FOUND": "It no longer exists.",
     "PLAN_UNCHANGED": "That is already your plan.",
     "IDEMPOTENCY_KEY_REUSED": "This form was already used for a different request. Reload the page.",
-    "INVALID_PLAN": "Choose a plan."
+    "INVALID_PLAN": "Choose a plan.",
+    "ORG_SUSPENDED": "This organisation is suspended, so nothing can be changed. Contact Ledgerly support.",
+    "FORBIDDEN": "You do not have permission to do this."
   },
   "shell": {
     "organization": "Organisation",
@@ -64,7 +66,9 @@
     "openNavigation": "Open navigation",
     "closeNavigation": "Close navigation",
     "dismiss": "Dismiss",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "suspendedTitle": "This organisation is suspended.",
+    "suspendedBody": "You can view everything, but nothing can be changed. Contact Ledgerly support to restore access."
   },
   "nav": {
     "dashboard": "Dashboard",

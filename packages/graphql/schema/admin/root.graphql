@@ -1,0 +1,5 @@
+# The platform admin console's schema (ADR-0004), served at /admin/graphql by its own Apollo
+# Server instance. None of these types exist in the tenant schema, and it has no invoice,
+# customer or payment detail types: staff see counts, totals and metadata only.
+type Query
+type Mutation

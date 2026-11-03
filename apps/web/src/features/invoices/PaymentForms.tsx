@@ -8,6 +8,7 @@ import { Field, FormError, SelectField } from '@web/components/form/Field';
 import { formText } from '@web/components/form/formData';
 import styles from '@web/components/form/Form.module.scss';
 import { PayInvoiceByCardMutation, RecordPaymentMutation } from '@web/graphql/documents';
+import { errorCodeOf } from '@web/lib/apollo/error-code';
 import { useIdempotencyKey } from '@web/lib/hooks/useIdempotencyKey';
 import { useMoney } from '@web/lib/hooks/useMoney';
 import { useToast } from '@web/lib/hooks/useToast';
@@ -61,8 +62,8 @@ function usePaymentAction(
       try {
         const errors = (await send(amount, formData, key)) ?? [];
         if (errors.length > 0) return { errors };
-      } catch {
-        return { errors: [{ code: 'generic', message: '', field: [] }] };
+      } catch (error) {
+        return { errors: [{ code: errorCodeOf(error), message: '', field: [] }] };
       }
       renew();
       toast('success', t('paymentRecorded', { amount: money(amount, props.currency) }));

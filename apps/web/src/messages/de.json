@@ -49,7 +49,9 @@
     "NOT_FOUND": "Das existiert nicht mehr.",
     "PLAN_UNCHANGED": "Das ist bereits Ihr Tarif.",
     "IDEMPOTENCY_KEY_REUSED": "Dieses Formular wurde bereits für eine andere Anfrage verwendet. Laden Sie die Seite neu.",
-    "INVALID_PLAN": "Wählen Sie einen Tarif."
+    "INVALID_PLAN": "Wählen Sie einen Tarif.",
+    "ORG_SUSPENDED": "Diese Organisation ist gesperrt; es kann nichts geändert werden. Wenden Sie sich an den Ledgerly-Support.",
+    "FORBIDDEN": "Dazu fehlt Ihnen die Berechtigung."
   },
   "shell": {
     "organization": "Organisation",
@@ -64,7 +66,9 @@
     "openNavigation": "Navigation öffnen",
     "closeNavigation": "Navigation schließen",
     "dismiss": "Schließen",
-    "notifications": "Benachrichtigungen"
+    "notifications": "Benachrichtigungen",
+    "suspendedTitle": "Diese Organisation ist gesperrt.",
+    "suspendedBody": "Sie können alles ansehen, aber nichts ändern. Wenden Sie sich an den Ledgerly-Support, um den Zugriff wiederherzustellen."
   },
   "nav": {
     "dashboard": "Übersicht",

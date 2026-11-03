@@ -1,11 +1,11 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
-// Resolver types for the tenant schema. Mappers say what each GraphQL type's resolvers receive
-// as their parent: the database record or domain object, never the GraphQL shape (PLAN §3.3).
+// Resolver types for the tenant and admin schemas. Mappers say what each GraphQL type's resolvers
+// receive as their parent: the database record or domain object, never the GraphQL shape (§3.3).
 const config: CodegenConfig = {
-  schema: '../../packages/graphql/schema/tenant/*.graphql',
   generates: {
     'src/graphql/__generated__/resolvers.ts': {
+      schema: '../../packages/graphql/schema/tenant/*.graphql',
       plugins: ['typescript', 'typescript-resolvers'],
       config: {
         useTypeImports: true,
@@ -36,6 +36,30 @@ const config: CodegenConfig = {
           Money: '@ledgerly/domain#Money as DomainMoney',
           Plan: '@ledgerly/domain#Plan as DomainPlan',
           CurrencyTotals: '../../features/invoices/dashboard.types.ts#CurrencyTotalsParent',
+        },
+      },
+    },
+    // The admin console's schema (ADR-0004): a separate Apollo Server, separate types.
+    'src/admin/graphql/__generated__/resolvers.ts': {
+      schema: '../../packages/graphql/schema/admin/*.graphql',
+      plugins: ['typescript', 'typescript-resolvers'],
+      config: {
+        useTypeImports: true,
+        enumsAsTypes: true,
+        immutableTypes: true,
+        avoidOptionals: { field: true, inputValue: false },
+        contextType: '../../context.ts#AdminContext',
+        useIndexSignature: false,
+        scalars: { DateTime: 'Date', ID: 'string' },
+        mappers: {
+          Staff: '../../staff/staff.model.ts#StaffRecord',
+          Organization: '../../../features/organizations/organization.model.ts#OrganizationRecord',
+          Usage: '../../organizations/org-admin.types.ts#UsageParent',
+          CurrencyTotal: '../../organizations/org-admin.types.ts#CurrencyTotalParent',
+          Health: '../../organizations/org-admin.types.ts#HealthParent',
+          Member: '../../organizations/org-admin.types.ts#MemberParent',
+          Money: '@ledgerly/domain#Money as DomainMoney',
+          AuditEntry: '../../audit/audit.model.ts#AuditEntryRecord',
         },
       },
     },

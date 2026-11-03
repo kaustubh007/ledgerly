@@ -1,0 +1,64 @@
+enum StaffRole {
+  "Reads: search organisations, view them, read the audit log."
+  SUPPORT
+  "Everything SUPPORT can do, plus suspend, change plan and revoke sessions."
+  OPS
+}
+
+type Staff {
+  id: ID!
+  email: String!
+  name: String!
+  role: StaffRole!
+}
+
+input StaffSignInInput {
+  email: String!
+  password: String!
+}
+
+input VerifyMfaInput {
+  "A 6-digit authenticator code, or a recovery code such as `k3m9-x2pq`."
+  code: String!
+}
+
+enum MfaStep {
+  "First sign-in: add the secret to an authenticator app, then enter a code."
+  ENROL
+  "Enter a code from the authenticator app (or a recovery code)."
+  VERIFY
+}
+
+type MfaEnrolment {
+  "Base32 secret, for typing into an authenticator app."
+  secret: String!
+  "The same secret as an otpauth:// URI, for a QR code."
+  otpauthUri: String!
+}
+
+type SignInPayload {
+  "Set when the password was right. The challenge itself is an HttpOnly cookie."
+  next: MfaStep
+  enrolment: MfaEnrolment
+  userErrors: [UserError!]!
+}
+
+type VerifyMfaPayload {
+  staff: Staff
+  "Shown once, after enrolment. Each code signs in once in place of an authenticator code."
+  recoveryCodes: [String!]
+  userErrors: [UserError!]!
+}
+
+extend type Query {
+  "The signed-in staff member, or null."
+  me: Staff
+}
+
+extend type Mutation {
+  "Step 1: email and password. Sets the MFA challenge cookie."
+  signIn(input: StaffSignInInput!): SignInPayload!
+  "Step 2: the TOTP or recovery code. Sets the session cookie (8 h absolute, 30 min idle)."
+  verifyMfa(input: VerifyMfaInput!): VerifyMfaPayload!
+  signOut: Boolean!
+}

@@ -12,8 +12,21 @@ export interface RequestContext {
   /** Set when a valid access token for an active session was presented. */
   readonly user?: { readonly userId: string; readonly sessionId: string };
   /** Set when `x-org` names an organisation the user belongs to. */
-  readonly tenant?: { readonly orgId: string; readonly role: Role };
+  readonly tenant?: { readonly orgId: string; readonly role: Role; readonly suspended?: boolean };
+  /** Admin console requests only (ADR-0004): the signed-in staff member. Never with `user`. */
+  readonly staff?: {
+    readonly staffId: string;
+    readonly sessionId: string;
+    readonly role: StaffRole;
+  };
+  /**
+   * Set only inside `runAsPlatform()` (admin module). Lets the tenant guard admit the reads the
+   * admin module registered, one named organisation at a time. Never together with `tenant`.
+   */
+  readonly platform?: { readonly staffId: string; readonly reason: string | null };
 }
+
+export type StaffRole = 'SUPPORT' | 'OPS';
 
 const storage = new AsyncLocalStorage<RequestContext>();
 
@@ -23,6 +36,12 @@ export function runWithContext<T>(context: RequestContext, fn: () => T): T {
 
 export function currentContext(): RequestContext | undefined {
   return storage.getStore();
+}
+
+/** The platform scope, if `runAsPlatform()` is active (and no tenant is). */
+export function currentPlatform(): RequestContext['platform'] {
+  const store = storage.getStore();
+  return store?.tenant ? undefined : store?.platform;
 }
 
 /** Org id for the tenant guard. Undefined outside a tenant-scoped request. */
@@ -36,6 +55,14 @@ export function currentOrgId(): string | undefined {
  * accepting an invitation. Never pass an org id taken from client input.
  */
 export function runInTenant<T>(orgId: string, role: Role, fn: () => T): T {
-  const base = storage.getStore() ?? { requestId: 'internal', ip: '', userAgent: undefined };
-  return storage.run({ ...base, tenant: { orgId, role } }, fn);
+  // Only the caller's identity carries over: never a platform scope or a staff session.
+  const store = storage.getStore();
+  const context: RequestContext = {
+    requestId: store?.requestId ?? 'internal',
+    ip: store?.ip ?? '',
+    userAgent: store?.userAgent,
+    ...(store?.user ? { user: store.user } : {}),
+    tenant: { orgId, role },
+  };
+  return storage.run(context, fn);
 }

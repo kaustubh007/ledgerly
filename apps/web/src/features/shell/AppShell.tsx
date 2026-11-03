@@ -92,6 +92,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </ul>
       </nav>
       <main id="content" className={styles['main']} tabIndex={-1}>
+        {org.suspended === true && (
+          <p className={styles['suspended']}>
+            <strong>{t('shell.suspendedTitle')}</strong> {t('shell.suspendedBody')}
+          </p>
+        )}
         {children}
       </main>
       <Toaster />

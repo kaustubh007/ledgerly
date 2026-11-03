@@ -44,6 +44,7 @@ export async function startTestApp(env: Record<string, string> = {}): Promise<Te
     ACCESS_TOKEN_PRIVATE_JWK: JSON.stringify(await exportJWK(privateKey)),
     ACCESS_TOKEN_PUBLIC_JWK: JSON.stringify(await exportJWK(publicKey)),
     REFRESH_GRACE_KEY: randomBytes(32).toString('base64url'),
+    TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),
     // One trusted hop, so tests can choose the client IP with X-Forwarded-For.
     TRUST_PROXY_HOPS: '1',
     ...env,
@@ -58,12 +59,13 @@ export async function startTestApp(env: Record<string, string> = {}): Promise<Te
       config.ACCESS_TOKEN_PUBLIC_JWK,
     ),
     graceKey: Buffer.from(config.REFRESH_GRACE_KEY, 'base64url'),
+    totpKey: Buffer.from(config.TOTP_ENCRYPTION_KEY, 'base64url'),
     paymentGateway: new PaymentGatewaySimulator(clock),
   };
 
   await connect(config.MONGODB_URI);
   await syncIndexes();
-  const { app, apollo } = await createApp(deps);
+  const { app, apollo, adminApollo } = await createApp(deps);
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once('listening', resolve));
   const url = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
@@ -85,7 +87,7 @@ export async function startTestApp(env: Record<string, string> = {}): Promise<Te
           resolve();
         }),
       );
-      await apollo.stop();
+      await Promise.all([apollo.stop(), adminApollo.stop()]);
       await disconnect();
     },
   };
@@ -167,6 +169,28 @@ export class Client {
     });
     const body = (await response.json()) as Omit<GraphQLResponse<T>, 'status'>;
     return { status: response.status, ...body };
+  }
+
+  /** A request to the admin console's API (ADR-0004). Sends whatever cookies this client has. */
+  async adminGql<T = Record<string, unknown>>(
+    query: string,
+    variables: Record<string, unknown> = {},
+  ): Promise<GraphQLResponse<T>> {
+    const response = await this.request('/admin/graphql', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    });
+    const body = (await response.json()) as Omit<GraphQLResponse<T>, 'status'>;
+    return { status: response.status, ...body };
+  }
+
+  /** Like adminGql, but fails the test on any GraphQL error and returns `data`. */
+  async adminOk<T = any>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+    const res = await this.adminGql<T>(query, variables);
+    if (res.errors?.length || !res.data)
+      throw new Error(`Admin GraphQL errors: ${JSON.stringify(res.errors)}`);
+    return res.data;
   }
 
   /** Like gql, but fails the test on any GraphQL error and returns `data`. */

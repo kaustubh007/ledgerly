@@ -10,10 +10,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "codegen": "graphql-codegen --config codegen.ts",
-    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/graphql/__generated__",
+    "codegen:check": "graphql-codegen --config codegen.ts && git diff --exit-code -- src/graphql/__generated__ src/admin/graphql/__generated__",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "keys": "node src/scripts/generate-keys.ts"
+    "keys": "node src/scripts/generate-keys.ts",
+    "staff:create": "node --conditions=@ledgerly/source --env-file-if-exists=../../.env src/scripts/create-staff.ts"
   },
   "dependencies": {
     "@apollo/server": "5.5.1",
@@ -37,6 +38,7 @@
     "graphql": "^16.14.2",
     "jose": "6.2.13",
     "mongoose": "9.11.4",
+    "otplib": "13.5.0",
     "pino": "10.4.0",
     "zod": "4.6.7"
   },

@@ -264,6 +264,7 @@ export const organizationsResolvers: Resolvers = {
     name: (org) => org.name,
     timeZone: (org) => org.timeZone,
     viewerRole: () => requireTenant().role,
+    suspended: (org) => org.status === 'SUSPENDED',
     members: () => membersOf(requireTenant('members:manage').orgId),
     invitations: (_, __, ctx) => {
       requireTenant('members:manage');

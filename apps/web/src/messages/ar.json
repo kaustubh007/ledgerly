@@ -49,7 +49,9 @@
     "NOT_FOUND": "لم يعد موجودًا.",
     "PLAN_UNCHANGED": "هذه هي خطتك بالفعل.",
     "IDEMPOTENCY_KEY_REUSED": "استُخدم هذا النموذج بالفعل لطلب مختلف. أعد تحميل الصفحة.",
-    "INVALID_PLAN": "اختر خطة."
+    "INVALID_PLAN": "اختر خطة.",
+    "ORG_SUSPENDED": "هذه المؤسسة معلّقة، لذا لا يمكن تغيير أي شيء. تواصل مع دعم Ledgerly.",
+    "FORBIDDEN": "ليست لديك صلاحية للقيام بذلك."
   },
   "shell": {
     "organization": "المؤسسة",
@@ -64,7 +66,9 @@
     "openNavigation": "فتح التنقل",
     "closeNavigation": "إغلاق التنقل",
     "dismiss": "إغلاق",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "suspendedTitle": "هذه المؤسسة معلّقة.",
+    "suspendedBody": "يمكنك عرض كل شيء، لكن لا يمكن تغيير أي شيء. تواصل مع دعم Ledgerly لاستعادة الوصول."
   },
   "nav": {
     "dashboard": "لوحة المعلومات",

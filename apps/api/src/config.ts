@@ -10,6 +10,8 @@ const Config = z.object({
   ACCESS_TOKEN_PUBLIC_JWK: z.string().min(1),
   /** 32-byte base64url key that encrypts the refresh successor during the grace window. */
   REFRESH_GRACE_KEY: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'expected 32 bytes, base64url'),
+  /** 32-byte base64url key that encrypts staff TOTP secrets at rest (admin console, ADR-0004). */
+  TOTP_ENCRYPTION_KEY: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'expected 32 bytes, base64url'),
   /** Origin the browser uses; links in emails are built from it. */
   PUBLIC_ORIGIN: z.url().default('http://localhost:3000'),
   /** Reverse proxies in front of the API (prod: CloudFront + ALB = 2). Decides `req.ip`. */
