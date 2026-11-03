@@ -2,6 +2,7 @@
 
 A multi-tenant invoicing SaaS built in phases as a production-grade learning project.
 
+- **New here?** Start with the [codebase tour](docs/ONBOARDING.md)
 - **Plan and phases:** [PLAN.md](PLAN.md)
 - **What each phase teaches:** [docs/learn](docs/learn)
 - **Architecture decisions:** [docs/adr](docs/adr) · **Other decisions:** [DECISIONS.md](DECISIONS.md)
@@ -14,7 +15,7 @@ A multi-tenant invoicing SaaS built in phases as a production-grade learning pro
 | 1 Foundation                     | done                                    |
 | 2 API, data, auth, observability | done                                    |
 | 3 Web shell                      | done                                    |
-| 4 Core features                  | in review                               |
+| 4 Core features                  | done                                    |
 | 5–8                              | planned (5 = admin console, revision 3) |
 
 ## Getting started
