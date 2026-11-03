@@ -2,6 +2,26 @@
 
 Decisions the plan did not specify, or that were made in review. Newest first within a phase.
 
+## Review process (2026-11-03)
+
+- **Three independent AI subject-matter-expert reviewers** (owner's request): two for
+  React/Next.js and one for Node.js, defined as Claude Code agents in `.claude/agents/`. The two
+  React reviewers split the web app instead of duplicating each other: architecture and runtime
+  (`nextjs-architecture-reviewer`) and UI quality, meaning accessibility, i18n, forms, theming and
+  tests (`react-ui-quality-reviewer`). `node-api-reviewer` covers the API, domain, data and
+  security.
+- **Independence:** each runs in its own job, reads only the code, the diff and the PR
+  description, and is told not to read other comments. None sees another's findings.
+- **When they run:** on opened, reopened and ready-for-review, and on adding the `sme-review`
+  label. Not on every push, to keep the cost and the comment volume down; re-adding the label
+  asks for a fresh review. A reviewer is skipped when no file in its area changed.
+- **Safety:** same-repository PRs only (the API key is a secret and the prompt contains PR
+  text); read-only tools plus PR comments; no edits, pushes, approvals or merges. Without the
+  `ANTHROPIC_API_KEY` secret the jobs pass with a notice instead of failing CI.
+- **Action:** `anthropics/claude-code-action@v1`, the current major, pinned to a digest by
+  Renovate like the other actions. Comments are posted with the workflow's `GITHUB_TOKEN`, so no
+  extra GitHub App permissions are needed.
+
 ## Phase 4 (2026-10-29)
 
 ### Code scanning (after Phase 4)

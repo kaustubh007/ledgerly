@@ -1,0 +1,99 @@
+name: SME review
+
+# Three independent AI reviews of a pull request, one per subject-matter expert defined in
+# .claude/agents/: two for React/Next.js (architecture; UI quality) and one for Node.js (the API).
+# Each runs in its own job, reads only the code and the diff, and posts its own comments. Their
+# findings are claims to verify, like any review.
+#
+# Runs when a PR is opened, reopened or marked ready. To review again after new commits (or to
+# review a PR that was already open), remove and re-add the `sme-review` label.
+# Needs the ANTHROPIC_API_KEY repository secret; without it each job passes with a notice.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: ${{ matrix.title }}
+    # Same-repository PRs only: the key is a secret, and the review prompt includes PR content.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'labeled' || github.event.label.name == 'sme-review')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - agent: nextjs-architecture-reviewer
+            title: 'React/Next.js SME: architecture'
+            paths: '^(apps/web/|packages/(domain|validation|graphql)/|docs/|README\.md$)'
+          - agent: react-ui-quality-reviewer
+            title: 'React/Next.js SME: UI quality'
+            paths: '^(apps/web/|packages/validation/|docs/|README\.md$)'
+          - agent: node-api-reviewer
+            title: 'Node.js SME: API'
+            paths: '^(apps/api/|packages/|infra/|compose\.yaml$|docs/|README\.md$)'
+    concurrency:
+      group: sme-review-${{ github.event.pull_request.number }}-${{ matrix.agent }}
+      cancel-in-progress: true
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+      PR: ${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Is anything in this reviewer's area?
+        id: scope
+        run: |
+          if gh pr diff "$PR" --name-only | grep -Eq '${{ matrix.paths }}'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No files in this reviewer's area changed; skipping."
+          fi
+
+      - name: Missing ANTHROPIC_API_KEY
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::Add the ANTHROPIC_API_KEY repository secret to enable SME reviews."
+
+      - name: Review
+        if: env.HAS_KEY == 'true' && steps.scope.outputs.relevant == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            HEAD SHA: ${{ github.event.pull_request.head.sha }}
+
+            You are the "${{ matrix.title }}" reviewer. Your instructions are in
+            .claude/agents/${{ matrix.agent }}.md: read that file first and follow it exactly.
+            The PR branch is checked out in the working directory.
+
+            Keep this review independent: base it on the code, `gh pr diff` and the PR
+            description (`gh pr view`, without `--comments`). Do not read other comments or
+            reviews on the PR.
+
+            Post the review on GitHub; do not return it as a message.
+            - One top-level comment with `gh pr comment`. Start it with the heading
+              "### ${{ matrix.title }} review" and the line "Reviewed at <first 7 characters of
+              HEAD SHA>", then your verdict and findings in the format your instructions give.
+            - For each blocking or should-fix finding on a line in the diff, also post an inline
+              comment with `mcp__github_inline_comment__create_inline_comment` (confirmed: true),
+              starting with "**${{ matrix.title }}** ·".
+            - End the top-level comment with this footer:
+
+              ---
+              _Independent SME review by Claude Code (`${{ matrix.agent }}`). Findings are claims to verify, not orders._
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),mcp__github_inline_comment__create_inline_comment"

@@ -619,7 +619,7 @@ Four test files are worth reading before any feature code: `apps/api/test/tenant
 
 ## 11. Adding a feature
 
-Say you add "archive a customer". The order that keeps the build green:
+Say you add "archive a customer". The order that keeps the build green, through to review:
 
 1. Domain rule first, with tests, if there is one (can a customer with unpaid invoices be
    archived?).
@@ -636,6 +636,9 @@ Say you add "archive a customer". The order that keeps the build green:
    strings to all three message files.
 9. Component test with RTL and axe; an E2E step if it's part of a main journey.
 10. `pnpm check` green, then a `DECISIONS.md` line for anything the plan didn't specify.
+11. Open the PR. Three independent reviewers comment on it: two React/Next.js experts and one
+    Node.js expert (see "Pull request reviews" in the README). Verify each finding, then fix it
+    or reply with why not.
 
 ## 12. Your first week
 
